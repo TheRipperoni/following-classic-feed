@@ -8,7 +8,6 @@ use rsky_identity::IdResolver;
 use std::env;
 
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct ApiKey(pub String);
 
 #[derive(Debug)]

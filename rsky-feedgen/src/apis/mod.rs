@@ -1184,12 +1184,6 @@ pub async fn get_usage_stats(
         })?
 }
 
-/**
- * Retrieves visitor records from the database.
- *
- * @param connection - The database connection.
- * @returns A Result containing a vector of Visitor records or a ValidationErrorMessageResponse.
- */
 pub async fn get_visitors(
     connection: ReadReplicaConn,
 ) -> Result<Vec<Visitor>, ValidationErrorMessageResponse> {
@@ -1219,13 +1213,6 @@ pub async fn get_visitors(
         })?
 }
 
-/**
- * Retrieves the cursor for a given service from the database.
- *
- * @param service_ - The service identifier.
- * @param connection - The database connection.
- * @returns A Result containing the SubState or a PathUnknownErrorMessageResponse.
- */
 pub async fn get_cursor(
     service_: String,
     connection: ReadReplicaConn,

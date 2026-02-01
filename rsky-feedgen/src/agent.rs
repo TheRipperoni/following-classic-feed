@@ -6,13 +6,6 @@ use bsky_sdk::BskyAgent;
 use ipld_core::ipld::Ipld;
 use std::str::FromStr;
 
-/**
- * Retrieves a list of follows for a given DID using the Bluesky agent.
- *
- * @param agent - The Bluesky agent instance.
- * @param did - The DID for which to retrieve follows.
- * @returns A vector of Follow objects representing the user's follows.
- */
 #[tracing::instrument(skip(agent))]
 pub async fn get_follows(agent: &BskyAgent, did: &str) -> Vec<Follow> {
     use bsky_sdk::api::com::atproto::repo::list_records::{Parameters, ParametersData};

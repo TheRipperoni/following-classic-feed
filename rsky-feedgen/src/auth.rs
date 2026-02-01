@@ -7,14 +7,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub mod extractors;
 
-/**
- * Verifies a JSON Web Token (JWT) for a given service DID.
- *
- * @param jwtstr - The JWT string to verify.
- * @param service_did - The DID of the service to verify against.
- * @param resolver - The identity resolver for DID resolution.
- * @returns A Result containing the DID of the JWT issuer or an error.
- */
 pub async fn verify_jwt(
     jwtstr: &str,
     service_did: &String,
