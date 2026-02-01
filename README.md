@@ -1,17 +1,8 @@
-# RSky
-
-[![Ceasefire Now](https://badge.techforpalestine.org/default)](https://techforpalestine.org/learn-more) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-
-`rsky` is a Rust-based implementation of various AT Protocol (atproto) components, including a feed generator, a Jetstream subscriber, and a database janitor.
+# Following Classic Feed
 
 ## Overview
 
-RSky provides a set of tools for interacting with the AT Protocol:
-- **Feed Generator**: Mimics the behavior of the following feed prior to updated changes and supports additional feature customization.
-- **Jetstream Subscriber**: Subscribes to the AT Protocol event stream (firehose) and processes records.
-- **Janitor**: A database cleanup service that maintains data retention policies.
-
-The project is structured as a Cargo workspace with several crates providing cryptographic helpers, identity resolution, lexicon types, and syntax parsing.
+Source code for the Following Classic Feed project.
 
 ## Project Structure
 
