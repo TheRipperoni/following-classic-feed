@@ -1,7 +1,7 @@
 use crate::agent::{get_agent, get_follows};
 use crate::db::*;
-use crate::models::{post_result::PostResultReason, UsageStats, Visitor};
 use crate::models::*;
+use crate::models::{UsageStats, Visitor};
 use crate::schema::follow::dsl as FollowSchema;
 use crate::schema::user_feed_preference::dsl as UserFeedSchema;
 use crate::schema::user_feed_preference::dsl::user_feed_preference;
@@ -14,6 +14,7 @@ use diesel::sql_query;
 use rsky_lexicon::app::bsky::embed::Embeds;
 use std::fmt::Write;
 use std::time::SystemTime;
+use crate::models::domain::post_result::PostResultReason;
 
 const SHOW_REPLIES_FOR_FOLLOWING_ONLY: &str =
     "at://did:plc:cimwguwdlh2i2mebdqczgcyl/app.bsky.feed.post/3l5fyouhr7z26";
@@ -1183,6 +1184,12 @@ pub async fn get_usage_stats(
         })?
 }
 
+/**
+ * Retrieves visitor records from the database.
+ *
+ * @param connection - The database connection.
+ * @returns A Result containing a vector of Visitor records or a ValidationErrorMessageResponse.
+ */
 pub async fn get_visitors(
     connection: ReadReplicaConn,
 ) -> Result<Vec<Visitor>, ValidationErrorMessageResponse> {
@@ -1212,6 +1219,13 @@ pub async fn get_visitors(
         })?
 }
 
+/**
+ * Retrieves the cursor for a given service from the database.
+ *
+ * @param service_ - The service identifier.
+ * @param connection - The database connection.
+ * @returns A Result containing the SubState or a PathUnknownErrorMessageResponse.
+ */
 pub async fn get_cursor(
     service_: String,
     connection: ReadReplicaConn,
@@ -1222,8 +1236,8 @@ pub async fn get_cursor(
         .0
         .get()
         .await
-        .map_err(|_| crate::models::PathUnknownErrorMessageResponse {
-            code: Some(crate::models::NotFoundErrorCode::NotFoundError),
+        .map_err(|_| PathUnknownErrorMessageResponse {
+            code: Some(NotFoundErrorCode::NotFoundError),
             message: Some("Failed to get database connection.".into()),
         })?
         .interact(move |conn: &mut PgConnection| {
@@ -1238,16 +1252,16 @@ pub async fn get_cursor(
             if let Some(cursor_) = result.pop() {
                 Ok(cursor_)
             } else {
-                let not_found_error = crate::models::PathUnknownErrorMessageResponse {
-                    code: Some(crate::models::NotFoundErrorCode::NotFoundError),
+                let not_found_error = PathUnknownErrorMessageResponse {
+                    code: Some(NotFoundErrorCode::NotFoundError),
                     message: Some("Not found.".into()),
                 };
                 Err(not_found_error)
             }
         })
         .await
-        .map_err(|e| crate::models::PathUnknownErrorMessageResponse {
-            code: Some(crate::models::NotFoundErrorCode::NotFoundError),
+        .map_err(|e| PathUnknownErrorMessageResponse {
+            code: Some(NotFoundErrorCode::NotFoundError),
             message: Some(format!("Database interaction failed: {}", e)),
         })??;
 

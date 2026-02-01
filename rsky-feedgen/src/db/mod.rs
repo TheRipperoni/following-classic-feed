@@ -319,6 +319,12 @@ pub async fn user_config_update(
         .map_err(|e| format!("Database interaction failed: {}", e))
 }
 
+/**
+* Inserts a list of follows into the database.
+*
+* @param follows - The list of Follow records to insert.
+* @param conn - The database connection.
+*/
 pub fn insert_follows(follows: Vec<Follow>, conn: &mut PgConnection) {
     use crate::schema::follow::dsl as FollowSchema;
     let mut follows_to_insert = Vec::new();

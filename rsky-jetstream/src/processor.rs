@@ -28,7 +28,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
                     if commit.kind.is_empty() {
                         tracing::info!("Operations empty.");
                     }
-                    // update stored cursor every 20 events or so
+                    // update stored the cursor every 20 events or so
                     if commit.time_us.rem_euclid(20) == 0 {
                         let cursor_endpoint = format!("{}/cursor", default_queue_path);
                         let resp = update_cursor(
