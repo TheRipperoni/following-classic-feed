@@ -1,0 +1,40 @@
+services:
+  db:
+    container_name: rsky-db
+    image: postgres:14.11-bookworm
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    env_file:
+      - ./postgres.env
+
+  feedgen:
+    container_name: rsky-feedgen
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/rsky-feedgen:latest
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - ./feedgen.env
+
+  janitor:
+    container_name: rsky-janitor
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/rsky-janitor:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - ./janitor.env
+
+  jetstream:
+    container_name: rsky-jetstream
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/rsky-jetstream:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - ./jetstream.env
