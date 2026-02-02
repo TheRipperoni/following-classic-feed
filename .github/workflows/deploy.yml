@@ -34,13 +34,13 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/rsky-${{ matrix.service }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: rsky-${{ matrix.service }}/Dockerfile
+          file: ${{ matrix.service }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -63,8 +63,8 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           debug: true
-          source: "docker-compose.yml,rsky-feedgen/migrations,rsky-feedgen/diesel.toml"
-          target: "~/rsky-deploy/"
+          source: "docker-compose.yml,feedgen/migrations,feedgen/diesel.toml"
+          target: "~/deploy/"
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
@@ -79,17 +79,9 @@ jobs:
           debug: true
           envs: GITHUB_REPOSITORY_OWNER
           script: |
-            cd ~/rsky-deploy/
+            cd ~/deploy/
             echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
             sudo GITHUB_REPOSITORY_OWNER=$GITHUB_REPOSITORY_OWNER docker compose pull
             sudo GITHUB_REPOSITORY_OWNER=$GITHUB_REPOSITORY_OWNER docker compose up -d
-            
-            # Run migrations
-            sudo docker run --rm \
-              --network rsky-deploy_default \
-              -v $(pwd)/rsky-feedgen:/app \
-              -w /app \
-              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
-              clux/diesel-cli diesel migration run
-            
+  
             sudo docker image prune -f

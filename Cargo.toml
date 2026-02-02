@@ -1,13 +1,13 @@
 [workspace]
-members = [ "rsky-crypto", "rsky-feedgen", "rsky-identity", "rsky-lexicon", "rsky-syntax", "rsky-janitor", "rsky-jetstream"]
+members = ["crypto", "feedgen", "identity", "lexicon", "syntax", "janitor", "jetstream"]
 resolver = "2"
 
 [workspace.dependencies]
-cargo = { version = "0.81.0",features = ["vendored-openssl"] }
-rsky-lexicon = {path = "rsky-lexicon", version = "0.2.0"}
-rsky-identity = {path = "rsky-identity", version = "0.1.0"}
-rsky-crypto = {path = "rsky-crypto", version = "0.1.0"}
-rsky-syntax = {path = "rsky-syntax", version = "0.1.0"}
+cargo = { version = "0.94.0",features = ["vendored-openssl"] }
+lexicon = {path = "lexicon", version = "0.2.0"}
+identity = {path = "identity", version = "0.1.0"}
+crypto = {path = "crypto", version = "0.1.0"}
+syntax = {path = "syntax", version = "0.1.0"}
 
 [profile.release]
 debug = 2  # Or any level from 0 to 2

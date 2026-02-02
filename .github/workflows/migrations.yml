@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - 'rsky-feedgen/migrations/**'
+      - '../../feedgen/migrations/**'
   workflow_dispatch:
 
 jobs:
@@ -24,8 +24,8 @@ jobs:
           password: ${{ secrets.DEPLOY_PASSWORD }}
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
-          source: "rsky-feedgen/migrations,rsky-feedgen/diesel.toml"
-          target: "~/rsky-deploy/"
+          source: "feedgen/migrations,feedgen/diesel.toml"
+          target: "~/deploy/"
 
       - name: Run migrations via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -36,11 +36,11 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           script: |
-            cd ~/rsky-deploy/
+            cd ~/deploy/
             # Run migrations using diesel-cli docker image
             docker run --rm \
-              --network rsky-deploy_default \
-              -v $(pwd)/rsky-feedgen:/app \
+              --network deploy_default \
+              -v $(pwd)/feedgen:/app \
               -w /app \
               -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
               clux/diesel-cli diesel migration run

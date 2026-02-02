@@ -1,6 +1,6 @@
 services:
   db:
-    container_name: rsky-db
+    container_name: db
     image: postgres:14.11-bookworm
     ports:
       - "5432:5432"
@@ -11,8 +11,8 @@ services:
       - ./postgres.env
 
   feedgen:
-    container_name: rsky-feedgen
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-theripperoni}/rsky-feedgen:latest
+    container_name: feedgen
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-theripperoni}/feedgen:latest
     ports:
       - "3000:3000"
     restart: unless-stopped
@@ -22,8 +22,8 @@ services:
       - ./feedgen.env
 
   janitor:
-    container_name: rsky-janitor
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-theripperoni}/rsky-janitor:latest
+    container_name: janitor
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-theripperoni}/janitor:latest
     restart: unless-stopped
     depends_on:
       - db
@@ -31,8 +31,8 @@ services:
       - ./janitor.env
 
   jetstream:
-    container_name: rsky-jetstream
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-theripperoni}/rsky-jetstream:latest
+    container_name: jetstream
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-theripperoni}/jetstream:latest
     restart: unless-stopped
     depends_on:
       - db
@@ -40,8 +40,8 @@ services:
       - ./jetstream.env
 
   stats-viz:
-    container_name: rsky-stats-viz
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-theripperoni}/rsky-stats-viz:latest
+    container_name: stats-viz
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-theripperoni}/stats-viz:latest
     ports:
       - "8080:80"
     restart: unless-stopped

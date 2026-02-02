@@ -6,14 +6,14 @@ Source code for the Following Classic Feed project.
 
 ## Project Structure
 
-- `rsky-crypto`: Cryptographic helpers (secp256k1, p256, multibase).
-- `rsky-feedgen`: Rocket-based feed generator implementation and main API.
-- `rsky-identity`: DID and handle resolution logic.
-- `rsky-jetstream`: Subscriber for the Jetstream firehose.
-- `rsky-lexicon`: Central place for protocol-specific data structures and lexicons.
-- `rsky-syntax`: Parsing logic for AT URIs and other protocol syntax.
-- `rsky-janitor`: Cleanup service for the database.
-- `rsky-stats-viz`: Web frontend for viewing statistics.
+- `crypto`: Cryptographic helpers (secp256k1, p256, multibase).
+- `feedgen`: Rocket-based feed generator implementation and main API.
+- `identity`: DID and handle resolution logic.
+- `jetstream`: Subscriber for the Jetstream firehose.
+- `lexicon`: Central place for protocol-specific data structures and lexicons.
+- `syntax`: Parsing logic for AT URIs and other protocol syntax.
+- `janitor`: Cleanup service for the database.
+- `stats-viz`: Web frontend for viewing statistics.
 
 ## Requirements
 
@@ -44,7 +44,7 @@ Source code for the Following Classic Feed project.
 3.  **Database Migrations**:
     Navigate to the feed generator directory and run migrations:
     ```bash
-    cd rsky-feedgen
+    cd feedgen
     diesel migration run
     ```
 
@@ -83,13 +83,13 @@ docker-compose up -d
 You can run each component using `cargo`:
 ```bash
 # Run Feed Generator
-cargo run -p rsky-feedgen
+cargo run -p feedgen
 
 # Run Janitor
-cargo run -p rsky-janitor
+cargo run -p janitor
 
 # Run Jetstream Subscriber
-cargo run -p rsky-jetstream
+cargo run -p jetstream
 ```
 
 ## Testing
@@ -102,7 +102,7 @@ Tests are implemented using standard Rust `#[test]` attributes.
   ```
 - **Run tests for a specific crate**:
   ```bash
-  cargo test -p rsky-syntax
+  cargo test -p syntax
   ```
 
 ## CI/CD and Deployment
@@ -118,8 +118,8 @@ The following secrets are required for deployment:
 
 ### Server Setup
 1.  Install Docker and Docker Compose on your server.
-2.  Create the deployment directory: `mkdir -p ~/rsky-deploy/`.
-3.  Ensure your `.env` files are present in `~/rsky-deploy/` on the server.
+2.  Create the deployment directory: `mkdir -p ~/deploy/`.
+3.  Ensure your `.env` files are present in `~/deploy/` on the server.
 
 ## License
 

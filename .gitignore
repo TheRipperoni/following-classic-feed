@@ -1087,5 +1087,5 @@ rustc-*.txt
 /postgres/postmaster.opts
 /.junie/
 /.idea/
-/rsky-stats-viz/dist/
-/rsky-stats-viz/node_modules/
+/stats-viz/dist/
+/stats-viz/node_modules/
