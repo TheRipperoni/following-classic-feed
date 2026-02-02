@@ -38,6 +38,7 @@ const USER_PREF_OPTIONS: [&str; 6] = [
     HIDE_NOT_ALT_TEXT_POSTS,
 ];
 
+/// Moves fetched posts to seen posts and invalidates them from the fetched posts table for a user.
 fn update_seen_posts(did: &str, conn: &mut PgConnection) {
     println!("Checking if seen posts should be updated");
     let fetched_posts = get_fetched_posts(did, conn);
@@ -51,6 +52,7 @@ fn update_seen_posts(did: &str, conn: &mut PgConnection) {
     invalidate_fetched_posts(did, uri_list, conn);
 }
 
+/// Generates a SQL query string for fetching posts with media from followed users.
 fn post_media_query_str(following: &str) -> String {
     format!(
         "select uri,
@@ -98,6 +100,7 @@ where true=true",
     )
 }
 
+/// Generates a SQL query string for fetching posts based on user preferences and following list.
 fn post_query_str(
     hide_seen_posts: bool,
     hide_no_alt_text: bool,
@@ -223,6 +226,7 @@ where (\"replyParent\" is null or likeCount >= {like_threshold})",
     }
 }
 
+/// Generates a SQL query string for fetching reposts based on the following list and seen status.
 fn repost_query_str(hide_seen_posts: bool, following_reposts_string: &str, did: &str) -> String {
     if hide_seen_posts {
         format!(
@@ -242,8 +246,8 @@ fn repost_query_str(hide_seen_posts: bool, following_reposts_string: &str, did: 
        null   as \"externalThumb\",
        \"subjectCid\"   as \"quoteCid\",
        \"subjectUri\"   as \"quoteUri\",
-false   as \"media\",
-null as alt
+       false   as \"media\",
+       null as alt
 from (select r1.uri as uri,
              r1.cid as cid,
              r1.\"subjectUri\" as \"subjectUri\",
@@ -276,8 +280,8 @@ from (select r1.uri as uri,
        null   as \"externalThumb\",
        \"subjectCid\"   as \"quoteCid\",
        \"subjectUri\"   as \"quoteUri\",
-false   as \"media\",
-null as alt
+       false   as \"media\",
+       null as alt
 from (select r1.uri as uri,
              r1.cid as cid,
              r1.\"subjectUri\" as \"subjectUri\",
@@ -294,6 +298,11 @@ from (select r1.uri as uri,
     }
 }
 
+/// Retrieves a paginated feed of posts for a user based on their follows and preferences.
+///
+/// # Errors
+///
+/// Returns a `ValidationErrorMessageResponse` if database interactions fail.
 #[tracing::instrument(skip(connection))]
 pub async fn get_posts_by_user_feed(
     did: String,
@@ -418,6 +427,7 @@ pub async fn get_posts_by_user_feed(
 
 // --- Helper Functions for get_posts_by_user_feed ---
 
+/// Fetches follows from the remote service if they are not already cached in the database.
 async fn refresh_follows_if_needed(
     did: String,
     connection: &ReadReplicaConn,
@@ -449,6 +459,7 @@ async fn refresh_follows_if_needed(
     Ok(follow_dids)
 }
 
+/// Formats a list of DIDs into a comma-separated string of quoted DIDs for SQL `IN` clauses.
 fn format_did_list(dids: &[String]) -> String {
     dids.iter()
         .map(|did| format!("'{}'", did))
@@ -456,6 +467,7 @@ fn format_did_list(dids: &[String]) -> String {
         .join(",")
 }
 
+/// Retrieves user feed configuration or returns default settings if none exist.
 fn get_or_create_user_config(did: String, conn: &mut PgConnection) -> UserFeedPreference {
     get_user_config(did.as_str(), conn).unwrap_or(UserFeedPreference {
         did,
@@ -469,6 +481,7 @@ fn get_or_create_user_config(did: String, conn: &mut PgConnection) -> UserFeedPr
     })
 }
 
+/// Handles invalidation or updating of seen posts based on user preferences and pagination status.
 fn handle_seen_posts_invalidation(
     did: String,
     user_config: &UserFeedPreference,
@@ -488,6 +501,7 @@ fn handle_seen_posts_invalidation(
     }
 }
 
+/// Filters the list of followed DIDs to only those whose reposts should be shown.
 fn get_following_reposts_string(
     did: String,
     follow_dids: &[String],
@@ -506,6 +520,7 @@ fn get_following_reposts_string(
         .join(",")
 }
 
+/// Appends cursor conditions to the SQL query strings.
 fn apply_cursor_to_queries(
     cursor_str: &str,
     query_str: &str,
@@ -540,6 +555,7 @@ fn apply_cursor_to_queries(
     })
 }
 
+/// Generates a pagination cursor from the last post in a feed.
 fn generate_cursor_from_last_post(last_post: Option<&Post>) -> Option<String> {
     last_post.and_then(|lp| {
         NaiveDateTime::parse_from_str(&lp.indexed_at, "%+")
@@ -548,6 +564,7 @@ fn generate_cursor_from_last_post(last_post: Option<&Post>) -> Option<String> {
     })
 }
 
+/// Records a list of posts as having been fetched for a user.
 fn track_fetched_posts(did: String, posts: &[Post], conn: &mut PgConnection) {
     let fetched_posts = posts
         .iter()
@@ -559,6 +576,11 @@ fn track_fetched_posts(did: String, posts: &[Post], conn: &mut PgConnection) {
     insert_fetched_posts(fetched_posts, conn);
 }
 
+/// Retrieves a paginated feed of posts containing media from followed users.
+///
+/// # Errors
+///
+/// Returns a `ValidationErrorMessageResponse` if database interactions fail.
 #[tracing::instrument(skip(connection))]
 pub async fn get_posts_by_following_media(
     did: String,

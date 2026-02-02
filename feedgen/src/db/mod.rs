@@ -9,6 +9,11 @@ use std::env;
 use crate::schema::following_preference::dsl::following_preference;
 use crate::schema::user_feed_preference::dsl::user_feed_preference;
 
+/// Establishes a new PostgreSQL connection using the `DATABASE_URL` environment variable.
+///
+/// # Errors
+///
+/// Returns an error if the `DATABASE_URL` is not set or if the connection fails.
 #[tracing::instrument]
 pub fn establish_connection() -> Result<PgConnection, Box<dyn std::error::Error>> {
     dotenv().ok();
@@ -22,6 +27,7 @@ pub fn establish_connection() -> Result<PgConnection, Box<dyn std::error::Error>
     Ok(result)
 }
 
+/// Retrieves the feed preference for a specific user.
 pub fn get_user_config(_did: &str, conn: &mut PgConnection) -> Option<UserFeedPreference> {
     use crate::schema::user_feed_preference::dsl::*;
 
@@ -39,6 +45,7 @@ pub fn get_user_config(_did: &str, conn: &mut PgConnection) -> Option<UserFeedPr
     }
 }
 
+/// Retrieves the most recent posts fetched for a specific user.
 pub fn get_fetched_posts(_did: &str, conn: &mut PgConnection) -> Vec<FetchedPost> {
     use crate::schema::fetched_post::dsl::*;
 
@@ -50,6 +57,7 @@ pub fn get_fetched_posts(_did: &str, conn: &mut PgConnection) -> Vec<FetchedPost
         .expect("Error querying user feed")
 }
 
+/// Gets the total count of posts fetched for a specific user.
 pub fn get_total_fetches(_did: &str, conn: &mut PgConnection) -> i64 {
     use crate::schema::fetched_post::dsl::*;
 
@@ -62,6 +70,7 @@ pub fn get_total_fetches(_did: &str, conn: &mut PgConnection) -> i64 {
     result
 }
 
+/// Deletes all records of fetched posts for a specific user.
 pub fn invalidate_all_fetched_posts(_did: &str, conn: &mut PgConnection) {
     use crate::schema::fetched_post::did;
     use crate::schema::fetched_post::dsl::fetched_post;
@@ -74,6 +83,7 @@ pub fn invalidate_all_fetched_posts(_did: &str, conn: &mut PgConnection) {
     }
 }
 
+/// Deletes specific fetched post records for a user.
 pub fn invalidate_fetched_posts(_did: &str, uri_list: Vec<String>, conn: &mut PgConnection) {
     use crate::schema::fetched_post::did;
     use crate::schema::fetched_post::dsl::fetched_post;
@@ -93,6 +103,7 @@ pub fn invalidate_fetched_posts(_did: &str, uri_list: Vec<String>, conn: &mut Pg
     }
 }
 
+/// Inserts new records of posts fetched for a user.
 pub fn insert_fetched_posts(fetched_posts: Vec<FetchedPost>, conn: &mut PgConnection) {
     use crate::schema::fetched_post::dsl as FetchedPostSchema;
     let mut fetched_posts_to_insert = Vec::new();
@@ -110,6 +121,7 @@ pub fn insert_fetched_posts(fetched_posts: Vec<FetchedPost>, conn: &mut PgConnec
         .expect("Error inserting fetched_post records");
 }
 
+/// Records posts as "seen" by a user.
 pub fn insert_seen_posts(fetched_posts: Vec<FetchedPost>, conn: &mut PgConnection) {
     use crate::schema::seen_post::dsl as SeenPostSchema;
     let mut seen_posts_to_insert = Vec::new();
@@ -127,6 +139,7 @@ pub fn insert_seen_posts(fetched_posts: Vec<FetchedPost>, conn: &mut PgConnectio
         .expect("Error inserting seen_post records");
 }
 
+/// Retrieves a list of DIDs that the given user follows.
 pub async fn get_saved_follows(did: String, connection: &ReadReplicaConn) -> Vec<String> {
     use crate::schema::follow::dsl::*;
     let mut follows = Vec::new();
@@ -152,6 +165,7 @@ pub async fn get_saved_follows(did: String, connection: &ReadReplicaConn) -> Vec
     follows
 }
 
+/// Retrieves the following preferences (DIDs of followed users) for a given user.
 pub async fn get_following_preferences(did: String, connection: &ReadReplicaConn) -> Vec<String> {
     use crate::schema::follow::dsl::*;
     let mut follows = Vec::new();
@@ -177,6 +191,7 @@ pub async fn get_following_preferences(did: String, connection: &ReadReplicaConn
     follows
 }
 
+/// Checks if a user's follows have already been indexed.
 pub fn user_follows_indexed(did: &str, conn: &mut PgConnection) -> bool {
     use crate::schema::follow::dsl::*;
 
@@ -190,6 +205,11 @@ pub fn user_follows_indexed(did: &str, conn: &mut PgConnection) -> bool {
     !follows.is_empty()
 }
 
+/// Creates a new user feed preference record in the database.
+///
+/// # Errors
+///
+/// Returns an error message if the database connection or interaction fails.
 pub async fn user_config_creation(
     config: UserFeedPreference,
     connection: WriteDbConn,
@@ -220,6 +240,7 @@ pub async fn user_config_creation(
     Ok(())
 }
 
+/// Retrieves following preferences for a given user DID.
 pub fn get_following_preferences2(
     _did: String,
     conn: &mut PgConnection,
@@ -233,6 +254,7 @@ pub fn get_following_preferences2(
         .unwrap()
 }
 
+/// Fetches following preferences for a user asynchronously from the database.
 pub async fn following_pref_fetch(
     _did: String,
     connection: WriteDbConn,
@@ -256,6 +278,11 @@ pub async fn following_pref_fetch(
         .expect("Database interaction failed")
 }
 
+/// Updates or inserts a following preference record.
+///
+/// # Errors
+///
+/// Returns an error message if the database connection or interaction fails.
 pub async fn following_pref_update(
     _following_preference: FollowingPreference,
     connection: WriteDbConn,
@@ -280,6 +307,7 @@ pub async fn following_pref_update(
         .map_err(|e| format!("Database interaction failed: {}", e))
 }
 
+/// Fetches user feed preferences for a given user DID asynchronously.
 pub async fn user_config_fetch(_did: String, connection: WriteDbConn) -> Vec<UserFeedPreference> {
     use crate::schema::user_feed_preference::dsl::did;
     use crate::schema::user_feed_preference::dsl::user_feed_preference as UserFeedSchema;
@@ -300,6 +328,11 @@ pub async fn user_config_fetch(_did: String, connection: WriteDbConn) -> Vec<Use
         .expect("Database interaction failed")
 }
 
+/// Updates the user feed preference in the database.
+///
+/// # Errors
+///
+/// Returns an error message if the database connection or interaction fails.
 pub async fn user_config_update(
     config: UserFeedPreference,
     connection: WriteDbConn,
@@ -320,11 +353,11 @@ pub async fn user_config_update(
 }
 
 /**
-* Inserts a list of follows into the database.
-*
-* @param follows - The list of Follow records to insert.
-* @param conn - The database connection.
-*/
+ * Inserts a list of follows into the database.
+ *
+ * @param follows - The list of Follow records to insert.
+ * @param conn - The database connection.
+ */
 pub fn insert_follows(follows: Vec<Follow>, conn: &mut PgConnection) {
     use crate::schema::follow::dsl as FollowSchema;
     let mut follows_to_insert = Vec::new();
@@ -350,6 +383,7 @@ pub fn insert_follows(follows: Vec<Follow>, conn: &mut PgConnection) {
         .expect("Error inserting follow records");
 }
 
+/// Deletes posts from the database identified by their URIs.
 pub fn delete_posts_by_uri(delete_rows: Vec<String>, conn: &mut PgConnection) {
     diesel::delete(
         crate::schema::post::dsl::post.filter(crate::schema::post::dsl::uri.eq_any(delete_rows)),
@@ -358,6 +392,7 @@ pub fn delete_posts_by_uri(delete_rows: Vec<String>, conn: &mut PgConnection) {
     .expect("Error deleting post records");
 }
 
+/// Deletes posts from the database identified by their URIs (aliased from delete_posts_by_uri logic).
 pub fn delete_posts_by_rkey(delete_rows: Vec<String>, conn: &mut PgConnection) {
     diesel::delete(
         crate::schema::post::dsl::post.filter(crate::schema::post::dsl::uri.eq_any(delete_rows)),
@@ -366,6 +401,7 @@ pub fn delete_posts_by_rkey(delete_rows: Vec<String>, conn: &mut PgConnection) {
     .expect("Error deleting post records");
 }
 
+/// Deletes reposts from the database identified by their URIs.
 pub fn delete_reposts_by_uri(delete_rows: Vec<String>, conn: &mut PgConnection) {
     diesel::delete(
         crate::schema::repost::dsl::repost
@@ -375,6 +411,7 @@ pub fn delete_reposts_by_uri(delete_rows: Vec<String>, conn: &mut PgConnection) 
     .expect("Error deleting repost records");
 }
 
+/// Deletes follow records from the database identified by their URIs.
 pub fn delete_follows_by_uri(delete_rows: Vec<String>, conn: &mut PgConnection) {
     diesel::delete(
         crate::schema::follow::dsl::follow
@@ -384,6 +421,7 @@ pub fn delete_follows_by_uri(delete_rows: Vec<String>, conn: &mut PgConnection) 
     .expect("Error deleting follow records");
 }
 
+/// Deletes like records from the database identified by their URIs.
 pub fn delete_likes_by_uri(delete_rows: Vec<String>, conn: &mut PgConnection) {
     diesel::delete(
         crate::schema::like::dsl::like.filter(crate::schema::like::dsl::uri.eq_any(delete_rows)),
@@ -392,11 +430,13 @@ pub fn delete_likes_by_uri(delete_rows: Vec<String>, conn: &mut PgConnection) {
     .expect("Error deleting like records");
 }
 
+/// Represents the state of a cursor update for a service.
 pub struct CursorUpdateState {
     pub service: String,
     pub cursor: i64,
 }
 
+/// Updates or inserts the cursor state for a given service in the database.
 pub fn update_cursor_db(update_state: CursorUpdateState, conn: &mut PgConnection) {
     use crate::schema::sub_state::dsl::*;
 
