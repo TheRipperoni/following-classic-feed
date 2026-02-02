@@ -539,7 +539,7 @@ fn apply_cursor_to_queries(
                 Utc,
             );
             let mut timestr = String::new();
-            if let Ok(_) = write!(timestr, "{}", datetime.format("%+")) {
+            if write!(timestr, "{}", datetime.format("%+")).is_ok() {
                 let cursor_filter_str = format!(" AND (\"indexedAt\" < '{0}')", timestr);
                 let cursor_repost_filter_str = format!(" WHERE (\"indexedAt\" < '{0}')", timestr);
                 return Ok((
@@ -696,13 +696,13 @@ pub async fn get_posts_by_following_media(
                 .clone()
                 .into_iter()
                 .map(|result| {
-                    let post_result = if result.quote_uri.is_some() {
+                    let post_result = if let Some(quote_uri) = result.quote_uri {
                         let reason = PostResultReason {
                             reason_type: "app.bsky.feed.defs#skeletonReasonRepost".to_string(),
                             repost_uri: result.uri,
                         };
                         PostResult {
-                            post: result.quote_uri.unwrap(),
+                            post: quote_uri,
                             reason: Some(reason),
                         }
                     } else {
@@ -786,7 +786,7 @@ fn queue_post_creation(body: Vec<CreateRequest>, conn: &mut PgConnection) {
                             post_media_original = true;
                             post_alt_original = e.alt;
                         }
-                        Embeds::RecordWithMedia(e) => {}
+                        Embeds::RecordWithMedia(_e) => {}
                         Embeds::External(e) => {
                             new_post.external_uri = Some(e.external.uri);
                             new_post.external_title = Some(e.external.title);
@@ -848,9 +848,6 @@ fn queue_post_creation(body: Vec<CreateRequest>, conn: &mut PgConnection) {
                     }
                 }
             }
-
-            let uri_ = &new_post.uri;
-            let seq_ = &new_post.sequence;
 
             let new_post = (
                 PostSchema::uri.eq(new_post.uri),
@@ -1275,4 +1272,62 @@ pub async fn get_cursor(
         })??;
 
     Ok(result)
+}
+
+pub async fn get_janitor_config(
+    connection: ReadReplicaConn,
+) -> Result<JanitorConfig, ValidationErrorMessageResponse> {
+    use crate::schema::janitor_config::dsl::*;
+
+    connection
+        .0
+        .get()
+        .await
+        .map_err(|_| ValidationErrorMessageResponse {
+            code: Some(ErrorCode::ValidationError),
+            message: Some("Failed to get database connection".to_string()),
+        })?
+        .interact(move |conn: &mut PgConnection| {
+            janitor_config
+                .order(updated_at.desc())
+                .limit(1)
+                .select(JanitorConfig::as_select())
+                .first(conn)
+                .map_err(|e| ValidationErrorMessageResponse {
+                    code: Some(ErrorCode::ValidationError),
+                    message: Some(format!("Error loading janitor config: {}", e)),
+                })
+        })
+        .await
+        .map_err(|e| ValidationErrorMessageResponse {
+            code: Some(ErrorCode::ValidationError),
+            message: Some(format!("Database interaction failed: {}", e)),
+        })?
+}
+
+pub async fn update_janitor_config(
+    config: JanitorConfig,
+    connection: WriteDbConn,
+) -> Result<(), String> {
+    use crate::schema::janitor_config::dsl::*;
+
+    connection
+        .0
+        .get()
+        .await
+        .map_err(|e| format!("Failed to get database connection: {}", e))?
+        .interact(move |conn: &mut PgConnection| {
+            diesel::update(janitor_config.filter(id.eq(config.id)))
+                .set((
+                    cron_schedule.eq(config.cron_schedule),
+                    retention_days.eq(config.retention_days),
+                    updated_at.eq(diesel::dsl::now),
+                ))
+                .execute(conn)
+                .map_err(|e| format!("Error updating janitor config: {}", e))
+        })
+        .await
+        .map_err(|e| format!("Database interaction failed: {}", e))??;
+
+    Ok(())
 }

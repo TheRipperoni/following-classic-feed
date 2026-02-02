@@ -1,6 +1,7 @@
 pub mod fetched_post;
 pub mod follow;
 pub mod following_preference;
+pub mod janitor_config;
 pub mod jwt_parts;
 pub mod post;
 pub mod post_result;

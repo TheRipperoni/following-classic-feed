@@ -82,6 +82,10 @@ async fn main() {
         .route("/queue/{lex}/delete", post(queue_deletion))
         .route("/.well-known/did.json", get(well_known))
         .route("/cursor", get(get_cursor).put(update_cursor))
+        .route(
+            "/janitor/config",
+            get(get_janitor_config).put(update_janitor_config),
+        )
         .route("/stats", get(get_usage_stats))
         .route("/visitors", get(get_visitors))
         .with_state(state)

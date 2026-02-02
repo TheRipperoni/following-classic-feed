@@ -8,29 +8,41 @@ use std::{env, thread};
 fn main() {
     eprintln!("Starting Janitor");
     dotenv().ok();
-    let cron_schedule = env::var("CRON_SCHEDULE").unwrap_or("0 0 0 * * * *".to_string());
     let database_url = env::var("DATABASE_URL").expect("Missing db_url");
-
-    // How many days to retain data before deletion; default to 2 days
-    let retention_days: i32 = env::var("RETENTION_DAYS")
-        .ok()
-        .and_then(|v| v.parse::<i32>().ok())
-        .unwrap_or(2);
-
-    let schedule =
-        Schedule::from_str(cron_schedule.as_str()).expect("Failed to parse CRON expression");
 
     loop {
         eprintln!("Looping");
+        let (cron_schedule, retention_days) = get_config(database_url.as_str());
+
+        let schedule =
+            Schedule::from_str(cron_schedule.as_str()).expect("Failed to parse CRON expression");
+
         let now = Utc::now();
         if let Some(next) = schedule.upcoming(Utc).take(1).next() {
-            eprintln!("Cleaning");
+            eprintln!("Next run: {next}");
             let until_next = next - now;
-            eprintln!("Sleeping for {x}", x = until_next.num_hours());
-            thread::sleep(until_next.to_std().unwrap());
+
+            if until_next.num_seconds() > 0 {
+                eprintln!("Sleeping for {x} seconds", x = until_next.num_seconds());
+                thread::sleep(until_next.to_std().unwrap());
+            }
             clean_db(database_url.as_str(), retention_days);
         }
     }
+}
+
+fn get_config(database_url: &str) -> (String, i32) {
+    let mut client = Client::connect(database_url, NoTls).expect("Unable to connect");
+    let row = client
+        .query_one(
+            "SELECT cron_schedule, retention_days FROM janitor_config ORDER BY updated_at DESC LIMIT 1",
+            &[],
+        )
+        .expect("Failed to fetch janitor config");
+
+    let cron_schedule: String = row.get(0);
+    let retention_days: i32 = row.get(1);
+    (cron_schedule, retention_days)
 }
 
 fn clean_db(database_url: &str, retention_days: i32) {

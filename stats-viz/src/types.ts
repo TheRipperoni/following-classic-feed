@@ -10,3 +10,10 @@ export interface Visitor {
   visited_at: string;
   feed?: string;
 }
+
+export interface JanitorConfig {
+  id: number;
+  cron_schedule: string;
+  retention_days: number;
+  updated_at: string;
+}

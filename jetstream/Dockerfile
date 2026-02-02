@@ -1,5 +1,5 @@
 # Use the official Rust image.
-FROM --platform=linux/amd64 rust AS builder
+FROM --platform=linux/amd64 rust:1.93-bookworm AS builder
 
 # Copy local code to the container image.
 WORKDIR /usr/src/rsky

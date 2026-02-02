@@ -31,6 +31,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    janitor_config (id) {
+        id -> Int4,
+        cron_schedule -> Varchar,
+        retention_days -> Int4,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     like (uri) {
         uri -> Varchar,
         cid -> Varchar,
@@ -134,6 +143,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     fetched_post,
     follow,
     following_preference,
+    janitor_config,
     like,
     post,
     repost,

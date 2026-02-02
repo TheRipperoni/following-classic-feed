@@ -1,7 +1,7 @@
 use crate::auth::extractors::{ApiKey, OptionalAccessToken};
 use crate::models::{
     AlgoResponse, CreateRequest, DeleteRequest, FollowingPreference, InternalErrorCode,
-    InternalErrorMessageResponse, JwtParts, KnownService, NotFoundErrorCode,
+    InternalErrorMessageResponse, JanitorConfig, JwtParts, KnownService, NotFoundErrorCode,
     PathUnknownErrorMessageResponse, PostResult, SubState, UserFeedPreference, WellKnown,
 };
 use crate::{apis, db, ReadReplicaConn, WriteDbConn};
@@ -326,6 +326,37 @@ pub async fn get_visitors(State(connection): State<ReadReplicaConn>, _token: Api
             let internal_error = InternalErrorMessageResponse {
                 code: Some(InternalErrorCode::InternalError),
                 message: Some(error.to_string()),
+            };
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(internal_error)).into_response()
+        }
+    }
+}
+
+pub async fn get_janitor_config(
+    State(connection): State<ReadReplicaConn>,
+    _token: ApiKey,
+) -> Response {
+    match apis::get_janitor_config(connection).await {
+        Ok(config) => Json(config).into_response(),
+        Err(error) => {
+            tracing::error!("Internal Error: {error}");
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(error)).into_response()
+        }
+    }
+}
+
+pub async fn update_janitor_config(
+    State(connection): State<WriteDbConn>,
+    _token: ApiKey,
+    Json(body): Json<JanitorConfig>,
+) -> Response {
+    match apis::update_janitor_config(body, connection).await {
+        Ok(_) => StatusCode::OK.into_response(),
+        Err(error) => {
+            tracing::error!("Internal Error: {error}");
+            let internal_error = InternalErrorMessageResponse {
+                code: Some(InternalErrorCode::InternalError),
+                message: Some(error),
             };
             (StatusCode::INTERNAL_SERVER_ERROR, Json(internal_error)).into_response()
         }

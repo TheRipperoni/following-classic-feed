@@ -1,30 +1,48 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Users, UserCheck, Activity, RefreshCw, BarChart3 } from 'lucide-react';
-import type { UsageStats, Visitor } from './types.js';
+import { Users, UserCheck, Activity, RefreshCw, BarChart3, Settings, Save } from 'lucide-react';
+import type { UsageStats, Visitor, JanitorConfig } from './types.js';
 
 const API_BASE_URL = '/api'; // Using the proxy configured in nginx or vite
 
 function App() {
   const [stats, setStats] = useState<UsageStats | null>(null);
   const [visitors, setVisitors] = useState<Visitor[]>([]);
+  const [janitorConfig, setJanitorConfig] = useState<JanitorConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [configSaving, setConfigSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [statsRes, visitorsRes] = await Promise.all([
+      const [statsRes, visitorsRes, janitorRes] = await Promise.all([
         axios.get<UsageStats>(`${API_BASE_URL}/stats`),
-        axios.get<Visitor[]>(`${API_BASE_URL}/visitors`)
+        axios.get<Visitor[]>(`${API_BASE_URL}/visitors`),
+        axios.get<JanitorConfig>(`${API_BASE_URL}/janitor/config`)
       ]);
       setStats(statsRes.data);
       setVisitors(visitorsRes.data);
+      setJanitorConfig(janitorRes.data);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveJanitorConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!janitorConfig) return;
+    setConfigSaving(true);
+    try {
+      await axios.put(`${API_BASE_URL}/janitor/config`, janitorConfig);
+      alert('Janitor configuration updated successfully!');
+    } catch (err: any) {
+      alert('Failed to save configuration: ' + (err.message || 'Unknown error'));
+    } finally {
+      setConfigSaving(false);
     }
   };
 
@@ -87,6 +105,45 @@ function App() {
               <h2 className="text-3xl font-bold">{stats?.uniqueVisitors ?? '--'}</h2>
             </div>
           </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-8">
+          <h3 className="text-lg font-bold flex items-center gap-2 mb-4">
+            <Settings className="w-5 h-5 text-gray-500" />
+            Janitor Configuration
+          </h3>
+          <form onSubmit={saveJanitorConfig} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cron Schedule</label>
+              <input
+                type="text"
+                value={janitorConfig?.cron_schedule || ''}
+                onChange={(e) => setJanitorConfig(prev => prev ? { ...prev, cron_schedule: e.target.value } : null)}
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                placeholder="0 0 0 * * *"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Retention Days</label>
+              <input
+                type="number"
+                value={janitorConfig?.retention_days || 0}
+                onChange={(e) => setJanitorConfig(prev => prev ? { ...prev, retention_days: parseInt(e.target.value) || 0 } : null)}
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={configSaving || !janitorConfig}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 h-[38px]"
+            >
+              <Save className="w-4 h-4" />
+              {configSaving ? 'Saving...' : 'Save Settings'}
+            </button>
+          </form>
+          {janitorConfig?.updated_at && (
+            <p className="mt-2 text-xs text-gray-500 italic">Last updated: {new Date(janitorConfig.updated_at).toLocaleString()}</p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
