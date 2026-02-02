@@ -1093,3 +1093,4 @@ rustc-*.txt
 /jetstream.env
 /feedgen.env
 /janitor.env
+/.output.txt
