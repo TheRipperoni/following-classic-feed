@@ -6,7 +6,12 @@ services:
       - "5432:5432"
     restart: unless-stopped
     volumes:
-      - ./postgres:/var/lib/postgresql/data
+        - type: bind
+          source: /home/ubuntu/deploy/following-storage
+          target: /var/lib/postgresql/data
+          bind:
+            create_host_path: true
+    shm_size: 512mb
     env_file:
       - ./postgres.env
 
