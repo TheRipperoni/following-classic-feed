@@ -13,8 +13,6 @@ services:
   feedgen:
     container_name: feedgen
     image: ghcr.io/theripperoni/feedgen:latest
-    ports:
-      - "3000:3000"
     restart: unless-stopped
     depends_on:
       - db
@@ -42,10 +40,31 @@ services:
   stats-viz:
     container_name: stats-viz
     image: ghcr.io/theripperoni/stats-viz:latest
-    ports:
-      - "8080:80"
     restart: unless-stopped
     depends_on:
       - feedgen
     environment:
       - API_KEY=${API_KEY:-test-key}
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - FEEDGEN_DOMAIN=${FEEDGEN_DOMAIN:-localhost}
+      - STATS_DOMAIN=${STATS_DOMAIN:-stats.localhost}
+    depends_on:
+      - feedgen
+      - stats-viz
+
+volumes:
+  caddy_data:
+  caddy_config:

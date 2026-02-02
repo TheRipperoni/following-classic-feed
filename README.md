@@ -60,6 +60,8 @@ Source code for the Following Classic Feed project.
 - `READ_REPLICA_URL`: Connection string for the read replica (optional, defaults to `DATABASE_URL`).
 - `FEEDGEN_SERVICE_DID`: The DID of the feed generator service.
 - `FEEDGEN_HOSTNAME`: The hostname where the feed generator is hosted.
+- `FEEDGEN_DOMAIN`: Domain for Caddy to route to feedgen (e.g., `feedgen.example.com`).
+- `STATS_DOMAIN`: Domain for Caddy to route to stats-viz (e.g., `stats.example.com`).
 - `FEEDGEN_SUBSCRIPTION_ENDPOINT`: WebSocket endpoint for the subscription (e.g., `wss://jetstream1.us-west.bsky.network`).
 
 ### Janitor (`janitor.env`)
@@ -72,6 +74,9 @@ Source code for the Following Classic Feed project.
 - `WANTED_COLLECTIONS`: Filter for collections to subscribe to.
 
 ## Running the Services
+
+### Reverse Proxy (Caddy)
+Traffic is directed to `feedgen` and `stats-viz` via Caddy. Ensure `FEEDGEN_DOMAIN` and `STATS_DOMAIN` environment variables are set.
 
 ### Using Docker Compose (Recommended)
 To start the entire stack (Database, Feedgen, Janitor, Jetstream):
