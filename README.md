@@ -13,6 +13,7 @@ Source code for the Following Classic Feed project.
 - `rsky-lexicon`: Central place for protocol-specific data structures and lexicons.
 - `rsky-syntax`: Parsing logic for AT URIs and other protocol syntax.
 - `rsky-janitor`: Cleanup service for the database.
+- `rsky-stats-viz`: Web frontend for viewing statistics.
 
 ## Requirements
 
@@ -113,6 +114,7 @@ The following secrets are required for deployment:
 - `DEPLOY_HOST`: The IP address or hostname of your server.
 - `DEPLOY_USER`: The SSH username.
 - `DEPLOY_KEY`: Your private SSH key.
+- `DEPLOY_PASSWORD`: (Optional) Password for SSH authentication.
 
 ### Server Setup
 1.  Install Docker and Docker Compose on your server.

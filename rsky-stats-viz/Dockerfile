@@ -15,7 +15,7 @@ FROM nginx:stable-alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Default nginx configuration template
-RUN echo 'server { \
+RUN mkdir -p /etc/nginx/templates && echo 'server { \
     listen 80; \
     location / { \
         root /usr/share/nginx/html; \
