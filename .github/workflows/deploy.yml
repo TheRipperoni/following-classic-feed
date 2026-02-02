@@ -17,7 +17,7 @@ jobs:
 
     strategy:
       matrix:
-        service: [feedgen, janitor, jetstream]
+        service: [feedgen, janitor, jetstream, stats-viz]
 
     steps:
       - name: Checkout repository
@@ -34,7 +34,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-${{ matrix.service }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/rsky-${{ matrix.service }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -54,7 +54,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Copy docker-compose.yml to server
+      - name: Copy docker-compose.yml and migrations to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -63,11 +63,13 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           debug: true
-          source: "docker-compose.yml"
+          source: "docker-compose.yml,rsky-feedgen/migrations,rsky-feedgen/diesel.toml"
           target: "~/rsky-deploy/"
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -75,9 +77,19 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           debug: true
+          envs: GITHUB_REPOSITORY_OWNER
           script: |
             cd ~/rsky-deploy/
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker compose pull
-            docker compose up -d
-            docker image prune -f
+            echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            sudo GITHUB_REPOSITORY_OWNER=$GITHUB_REPOSITORY_OWNER docker compose pull
+            sudo GITHUB_REPOSITORY_OWNER=$GITHUB_REPOSITORY_OWNER docker compose up -d
+            
+            # Run migrations
+            sudo docker run --rm \
+              --network rsky-deploy_default \
+              -v $(pwd)/rsky-feedgen:/app \
+              -w /app \
+              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+              clux/diesel-cli diesel migration run
+            
+            sudo docker image prune -f

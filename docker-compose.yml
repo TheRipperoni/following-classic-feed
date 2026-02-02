@@ -12,7 +12,7 @@ services:
 
   feedgen:
     container_name: rsky-feedgen
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/rsky-feedgen:latest
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-theripperoni}/rsky-feedgen:latest
     ports:
       - "3000:3000"
     restart: unless-stopped
@@ -23,7 +23,7 @@ services:
 
   janitor:
     container_name: rsky-janitor
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/rsky-janitor:latest
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-theripperoni}/rsky-janitor:latest
     restart: unless-stopped
     depends_on:
       - db
@@ -32,9 +32,20 @@ services:
 
   jetstream:
     container_name: rsky-jetstream
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/rsky-jetstream:latest
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-theripperoni}/rsky-jetstream:latest
     restart: unless-stopped
     depends_on:
       - db
     env_file:
       - ./jetstream.env
+
+  stats-viz:
+    container_name: rsky-stats-viz
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-theripperoni}/rsky-stats-viz:latest
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    depends_on:
+      - feedgen
+    environment:
+      - RSKY_API_KEY=${RSKY_API_KEY:-test-key}

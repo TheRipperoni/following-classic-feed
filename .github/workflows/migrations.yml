@@ -1,0 +1,46 @@
+name: Run Migrations
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'rsky-feedgen/migrations/**'
+  workflow_dispatch:
+
+jobs:
+  run-migrations:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy migrations to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          port: 22
+          source: "rsky-feedgen/migrations,rsky-feedgen/diesel.toml"
+          target: "~/rsky-deploy/"
+
+      - name: Run migrations via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          port: 22
+          script: |
+            cd ~/rsky-deploy/
+            # Run migrations using diesel-cli docker image
+            docker run --rm \
+              --network rsky-deploy_default \
+              -v $(pwd)/rsky-feedgen:/app \
+              -w /app \
+              -e DATABASE_URL=${{ secrets.DATABASE_URL }} \
+              clux/diesel-cli diesel migration run
