@@ -12,7 +12,7 @@ services:
 
   feedgen:
     container_name: feedgen
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-theripperoni}/feedgen:latest
+    image: ghcr.io/theripperoni/feedgen:latest
     ports:
       - "3000:3000"
     restart: unless-stopped
@@ -23,7 +23,7 @@ services:
 
   janitor:
     container_name: janitor
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-theripperoni}/janitor:latest
+    image: ghcr.io/theripperoni/janitor:latest
     restart: unless-stopped
     depends_on:
       - db
@@ -32,7 +32,7 @@ services:
 
   jetstream:
     container_name: jetstream
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-theripperoni}/jetstream:latest
+    image: ghcr.io/theripperoni/jetstream:latest
     restart: unless-stopped
     depends_on:
       - db
@@ -41,7 +41,7 @@ services:
 
   stats-viz:
     container_name: stats-viz
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-theripperoni}/stats-viz:latest
+    image: ghcr.io/theripperoni/stats-viz:latest
     ports:
       - "8080:80"
     restart: unless-stopped
