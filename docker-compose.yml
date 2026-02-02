@@ -12,7 +12,7 @@ services:
 
   feedgen:
     container_name: feedgen
-    image: ghcr.io/theripperoni/feedgen:latest
+    image: ghcr.io/theripperoni/feedgen:main
     restart: unless-stopped
     depends_on:
       - db
@@ -21,7 +21,7 @@ services:
 
   janitor:
     container_name: janitor
-    image: ghcr.io/theripperoni/janitor:latest
+    image: ghcr.io/theripperoni/janitor:main
     restart: unless-stopped
     depends_on:
       - db
@@ -30,7 +30,7 @@ services:
 
   jetstream:
     container_name: jetstream
-    image: ghcr.io/theripperoni/jetstream:latest
+    image: ghcr.io/theripperoni/jetstream:main
     restart: unless-stopped
     depends_on:
       - db
@@ -39,7 +39,7 @@ services:
 
   stats-viz:
     container_name: stats-viz
-    image: ghcr.io/theripperoni/stats-viz:latest
+    image: ghcr.io/theripperoni/stats-viz:main
     restart: unless-stopped
     depends_on:
       - feedgen
