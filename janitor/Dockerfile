@@ -16,8 +16,7 @@ COPY jetstream jetstream
 RUN cargo build --release --package janitor
 
 FROM --platform=linux/amd64 debian:bookworm-slim
-
-RUN apt-get update && apt-get install -y libssl3 ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libssl3 ca-certificates libpq5 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/app
 
