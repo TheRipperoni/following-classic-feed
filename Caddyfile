@@ -1,7 +1,0 @@
-following.ripperoni.com {
-    reverse_proxy feedgen:3000
-}
-
-followingstats.ripperoni.com {
-    reverse_proxy stats-viz:80
-}
