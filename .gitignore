@@ -1089,3 +1089,7 @@ rustc-*.txt
 /.idea/
 /stats-viz/dist/
 /stats-viz/node_modules/
+/postgres.env
+/jetstream.env
+/feedgen.env
+/janitor.env
