@@ -6,8 +6,8 @@ pub async fn queue_delete(
     records: Vec<DeleteOp>,
     client: &reqwest::Client,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let token = env::var("RSKY_API_KEY").map_err(|_| {
-        "Pass a valid preshared token via `RSKY_API_KEY` environment variable.".to_string()
+    let token = env::var("API_KEY").map_err(|_| {
+        "Pass a valid preshared token via `API_KEY` environment variable.".to_string()
     })?;
     client
         .put(url)
@@ -25,8 +25,8 @@ pub async fn queue_create<T: serde::ser::Serialize>(
     records: Vec<CreateOp<T>>,
     client: &reqwest::Client,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let token = env::var("RSKY_API_KEY").map_err(|_| {
-        "Pass a valid preshared token via `RSKY_API_KEY` environment variable.".to_string()
+    let token = env::var("API_KEY").map_err(|_| {
+        "Pass a valid preshared token via `API_KEY` environment variable.".to_string()
     })?;
     client
         .put(url)
@@ -45,8 +45,8 @@ pub async fn update_cursor(
     sequence: &i64,
     client: &reqwest::Client,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let token = env::var("RSKY_API_KEY").map_err(|_| {
-        "Pass a valid preshared token via `RSKY_API_KEY` environment variable.".to_string()
+    let token = env::var("API_KEY").map_err(|_| {
+        "Pass a valid preshared token via `API_KEY` environment variable.".to_string()
     })?;
     let query = vec![("service", service), ("sequence", sequence.to_string())];
     client

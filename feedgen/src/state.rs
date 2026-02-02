@@ -1,6 +1,6 @@
 use crate::{ReadReplicaConn, WriteDbConn};
 use axum::extract::FromRef;
-use rsky_identity::IdResolver;
+use identity::IdResolver;
 
 #[derive(Clone)]
 pub struct AppState {

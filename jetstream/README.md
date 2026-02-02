@@ -23,7 +23,7 @@
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `RSKY_API_KEY` | API key used for authenticating with the queue endpoint. | (Required) |
+| `API_KEY` | API key used for authenticating with the queue endpoint. | (Required) |
 | `FEEDGEN_QUEUE_ENDPOINT` | The URL of the service where events are queued. | `http://127.0.0.1:8000` |
 | `FEEDGEN_SUBSCRIPTION_ENDPOINT` | The Jetstream WebSocket endpoint. | `wss://jetstream1.us-west.bsky.network` |
 | `WANTED_COLLECTIONS` | Query parameters defining which collections to subscribe to. | (Posts, Reposts, Follows, Likes) |

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Users, UserCheck, Activity, RefreshCw, BarChart3 } from 'lucide-react';
 const API_BASE_URL = '/api'; // Using the proxy configured in vite.config.ts
-const API_KEY = import.meta.env.VITE_RSKY_API_KEY || 'test-key';
+const API_KEY = import.meta.env.VITE_API_KEY || 'test-key';
 function App() {
     const [stats, setStats] = useState(null);
     const [visitors, setVisitors] = useState([]);

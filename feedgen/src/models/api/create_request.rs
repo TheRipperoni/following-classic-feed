@@ -2,19 +2,19 @@
 #[serde(tag = "$type")]
 pub enum Lexicon {
     #[serde(rename(deserialize = "app.bsky.feed.post", serialize = "app.bsky.feed.post"))]
-    AppBskyFeedPost(Box<rsky_lexicon::app::bsky::feed::Post>),
+    AppBskyFeedPost(Box<lexicon::app::bsky::feed::Post>),
     #[serde(rename(
         deserialize = "app.bsky.feed.repost",
         serialize = "app.bsky.feed.repost"
     ))]
-    AppBskyFeedRepost(rsky_lexicon::app::bsky::feed::Repost),
+    AppBskyFeedRepost(lexicon::app::bsky::feed::Repost),
     #[serde(rename(deserialize = "app.bsky.feed.like", serialize = "app.bsky.feed.like"))]
-    AppBskyFeedLike(rsky_lexicon::app::bsky::feed::like::Like),
+    AppBskyFeedLike(lexicon::app::bsky::feed::like::Like),
     #[serde(rename(
         deserialize = "app.bsky.graph.follow",
         serialize = "app.bsky.graph.follow"
     ))]
-    AppBskyFeedFollow(rsky_lexicon::app::bsky::graph::follow::Follow),
+    AppBskyFeedFollow(lexicon::app::bsky::graph::follow::Follow),
 }
 
 #[derive(Debug, Serialize, Deserialize)]

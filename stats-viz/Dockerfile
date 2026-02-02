@@ -28,7 +28,7 @@ RUN mkdir -p /etc/nginx/templates && echo 'server { \
         proxy_set_header X-Real-IP $remote_addr; \
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
         proxy_set_header X-Forwarded-Proto $scheme; \
-        proxy_set_header X-KEY ${RSKY_API_KEY}; \
+        proxy_set_header X-KEY ${API_KEY}; \
     } \
 }' > /etc/nginx/templates/default.conf.template
 

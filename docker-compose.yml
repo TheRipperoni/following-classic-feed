@@ -48,4 +48,4 @@ services:
     depends_on:
       - feedgen
     environment:
-      - RSKY_API_KEY=${RSKY_API_KEY:-test-key}
+      - API_KEY=${API_KEY:-test-key}

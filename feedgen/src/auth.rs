@@ -1,8 +1,8 @@
 use crate::models::JwtParts;
 use anyhow::{anyhow, bail, Result};
 use base64::{engine::general_purpose, Engine as _};
-use rsky_crypto::verify::verify_signature;
-use rsky_identity::IdResolver;
+use crypto::verify::verify_signature;
+use identity::IdResolver;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub mod extractors;

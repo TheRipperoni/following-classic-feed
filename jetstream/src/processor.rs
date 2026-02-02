@@ -1,8 +1,8 @@
 use crate::jetstream::{read, JetstreamRepoMessage, Lexicon};
 use crate::queue::{queue_create, queue_delete, update_cursor};
-use rsky_lexicon::app::bsky::feed::like::Like;
-use rsky_lexicon::app::bsky::feed::{Post, Repost};
-use rsky_lexicon::app::bsky::graph::follow::Follow;
+use lexicon::app::bsky::feed::like::Like;
+use lexicon::app::bsky::feed::{Post, Repost};
+use lexicon::app::bsky::graph::follow::Follow;
 use std::env;
 
 #[tracing::instrument]

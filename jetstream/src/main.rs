@@ -1,6 +1,6 @@
 use dotenvy::dotenv;
 use futures::StreamExt as _;
-use rsky_jetstream::processor::process;
+use jetstream::processor::process;
 use std::env;
 use std::time::Duration;
 use tokio_tungstenite::tungstenite::protocol::Message;

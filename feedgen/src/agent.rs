@@ -25,8 +25,6 @@ pub async fn get_follows(agent: &BskyAgent, did: &str) -> Vec<Follow> {
                 limit: None,
                 repo: AtIdentifier::from_str(did).unwrap(),
                 reverse: None,
-                rkey_end: None,
-                rkey_start: None,
             },
             extra_data: Ipld::Null,
         })
@@ -60,8 +58,6 @@ pub async fn get_follows(agent: &BskyAgent, did: &str) -> Vec<Follow> {
                     limit: None,
                     repo: AtIdentifier::from_str(did).unwrap(),
                     reverse: None,
-                    rkey_end: None,
-                    rkey_start: None,
                 },
                 extra_data: Ipld::Null,
             })

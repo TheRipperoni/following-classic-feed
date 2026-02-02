@@ -5,7 +5,7 @@ extern crate serde;
 extern crate serde_json;
 
 extern crate lazy_static;
-extern crate rsky_lexicon;
+extern crate lexicon;
 
 use deadpool_diesel::postgres::{Object, Pool};
 

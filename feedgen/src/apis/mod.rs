@@ -12,7 +12,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::sql_query;
-use rsky_lexicon::app::bsky::embed::Embeds;
+use lexicon::app::bsky::embed::Embeds;
 use std::fmt::Write;
 use std::time::SystemTime;
 

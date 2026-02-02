@@ -18,8 +18,8 @@ npm install
 
 You can configure the connection to `feedgen` using environment variables:
 
-- `RSKY_FEEDGEN_URL`: The base URL of your feed generator (default: `http://localhost:8000`)
-- `RSKY_API_KEY`: The API key for authentication (default: `test-key`)
+- `FEEDGEN_URL`: The base URL of your feed generator (default: `http://localhost:8000`)
+- `API_KEY`: The API key for authentication (default: `test-key`)
 
 ## Usage
 

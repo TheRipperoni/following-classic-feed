@@ -1,7 +1,7 @@
 use anyhow::Result;
-use rsky_crypto::constants::{P256_JWT_ALG, SECP256K1_JWT_ALG};
-use rsky_crypto::did::{format_did_key, parse_multikey};
-use rsky_crypto::multibase::multibase_to_bytes;
+use crypto::constants::{P256_JWT_ALG, SECP256K1_JWT_ALG};
+use crypto::did::{format_did_key, parse_multikey};
+use crypto::multibase::multibase_to_bytes;
 
 #[derive(Clone)]
 pub struct VerificationMaterial {

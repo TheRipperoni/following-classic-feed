@@ -4,7 +4,7 @@ use axum::{
     http::{header, request::Parts, StatusCode},
     Json,
 };
-use rsky_identity::IdResolver;
+use identity::IdResolver;
 use std::env;
 
 #[derive(Debug)]
@@ -20,7 +20,7 @@ where
     type Rejection = (StatusCode, Json<InternalErrorMessageResponse>);
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let token = env::var("RSKY_API_KEY").map_err(|_| {
+        let token = env::var("API_KEY").map_err(|_| {
             (
                 StatusCode::BAD_REQUEST,
                 Json(InternalErrorMessageResponse {

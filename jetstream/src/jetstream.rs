@@ -1,9 +1,9 @@
 use anyhow::{bail, Result};
 use chrono::{DateTime, Utc};
-use rsky_lexicon::app::bsky::actor::Profile;
-use rsky_lexicon::app::bsky::feed::like::Like;
-use rsky_lexicon::app::bsky::feed::{Post, Repost, Threadgate};
-use rsky_lexicon::app::bsky::graph::follow::Follow;
+use lexicon::app::bsky::actor::Profile;
+use lexicon::app::bsky::feed::like::Like;
+use lexicon::app::bsky::feed::{Post, Repost, Threadgate};
+use lexicon::app::bsky::graph::follow::Follow;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -119,7 +119,7 @@ pub fn read(data: &str) -> Result<JetstreamRepoMessage> {
 mod tests {
     use super::*;
     use cid::Cid;
-    use rsky_lexicon::com::atproto::repo::StrongRef;
+    use lexicon::com::atproto::repo::StrongRef;
     use std::str::FromStr;
 
     #[test]

@@ -3,11 +3,11 @@ use axum::{
     Router,
 };
 use dotenvy::dotenv;
-use rsky_feedgen::handlers::*;
-use rsky_feedgen::state::AppState;
-use rsky_feedgen::{ReadReplicaConn, WriteDbConn};
-use rsky_identity::types::IdentityResolverOpts;
-use rsky_identity::IdResolver;
+use feedgen::handlers::*;
+use feedgen::state::AppState;
+use feedgen::{ReadReplicaConn, WriteDbConn};
+use identity::types::IdentityResolverOpts;
+use identity::IdResolver;
 use std::env;
 use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
