@@ -174,12 +174,14 @@ pub async fn get_cursor(
     }
 }
 
+#[tracing::instrument(skip(connection))]
 pub async fn queue_creation(
     State(connection): State<WriteDbConn>,
     Path(lex): Path<String>,
     _token: ApiKey,
     Json(body): Json<Vec<CreateRequest>>,
 ) -> Response {
+    tracing::info!("Queue creation request received");
     match apis::queue_creation(lex, body, connection).await {
         Ok(_) => StatusCode::OK.into_response(),
         Err(error) => {

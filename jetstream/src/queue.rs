@@ -6,7 +6,7 @@ pub async fn queue_delete(
     url: String,
     records: Vec<DeleteOp>,
     client: &reqwest::Client,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let token = env::var("API_KEY").map_err(|_| {
         "Pass a valid preshared token via `API_KEY` environment variable.".to_string()
     })?;
@@ -25,7 +25,7 @@ pub async fn queue_create<T: serde::ser::Serialize>(
     url: String,
     records: Vec<T>,
     client: &reqwest::Client,
-) -> Result<Response, Box<dyn std::error::Error>> {
+) -> Result<Response, Box<dyn std::error::Error + Send + Sync>> {
     let token = env::var("API_KEY").map_err(|_| {
         "Pass a valid preshared token via `API_KEY` environment variable.".to_string()
     })?;
@@ -45,7 +45,7 @@ pub async fn update_cursor(
     service: String,
     sequence: &i64,
     client: &reqwest::Client,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let token = env::var("API_KEY").map_err(|_| {
         "Pass a valid preshared token via `API_KEY` environment variable.".to_string()
     })?;
@@ -73,7 +73,7 @@ pub async fn get_cursor(
     url: String,
     service: String,
     client: &reqwest::Client,
-) -> Result<SubState, Box<dyn std::error::Error>> {
+) -> Result<SubState, Box<dyn std::error::Error + Send + Sync>> {
     let token = env::var("API_KEY").map_err(|_| {
         "Pass a valid preshared token via `API_KEY` environment variable.".to_string()
     })?;
