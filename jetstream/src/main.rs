@@ -41,6 +41,11 @@ async fn main() {
         }
     }
 
+    let concurrency_limit = env::var("MAX_CONCURRENCY")
+        .unwrap_or("32".into())
+        .parse::<usize>()
+        .unwrap_or(32);
+
     loop {
         let mut url = format!(
             "{sub}/subscribe?{filter}",
@@ -52,20 +57,30 @@ async fn main() {
         }
 
         match tokio_tungstenite::connect_async(url.as_str()).await {
-            Ok((mut socket, _response)) => {
+            Ok((socket, _response)) => {
                 tracing::info!("Connected to {default_subscriber_path:?}.");
-                while let Some(Ok(Message::Text(message))) = socket.next().await {
-                    let client = client.clone();
-                    let message_str = message.to_string();
-                    if let Ok(body) = jetstream::jetstream::read(&message_str) {
-                        if let jetstream::jetstream::JetstreamRepoMessage::Commit(commit) = body {
-                            cursor = Some(commit.time_us);
+
+                let queue_path = queue_endpoint.clone();
+                let sub_path = default_subscriber_path.clone();
+
+                socket
+                    .filter_map(|msg| async move {
+                        match msg {
+                            Ok(Message::Text(text)) => Some(text),
+                            _ => None,
                         }
-                    }
-                    tokio::spawn(async move {
-                        process(message_str, &client).await;
-                    });
-                }
+                    })
+                    .for_each_concurrent(concurrency_limit, |message| {
+                        let client = client.clone();
+                        let queue_path = queue_path.clone();
+                        let sub_path = sub_path.clone();
+                        async move {
+                            // Convert Utf8Bytes to String once here
+                            let msg = message.to_string();
+                            process(msg, &client, &queue_path, &sub_path).await;
+                        }
+                    })
+                    .await;
             }
             Err(error) => {
                 tracing::error!("Error connecting to {default_subscriber_path:?}. Waiting to reconnect: {error:?}");

@@ -3,15 +3,14 @@ use crate::queue::{queue_create, queue_delete, update_cursor};
 use lexicon::app::bsky::feed::like::Like;
 use lexicon::app::bsky::feed::{Post, Repost};
 use lexicon::app::bsky::graph::follow::Follow;
-use std::env;
 
 #[tracing::instrument]
-pub async fn process(message: String, client: &reqwest::Client) {
-    let default_queue_path =
-        env::var("FEEDGEN_QUEUE_ENDPOINT").unwrap_or("http://127.0.0.1:8000".into());
-    let default_subscriber_path = env::var("FEEDGEN_SUBSCRIPTION_ENDPOINT")
-        .unwrap_or("wss://jetstream1.us-west.bsky.network".into());
-
+pub async fn process(
+    message: String,
+    client: &reqwest::Client,
+    queue_path: &str,
+    subscriber_path: &str,
+) {
     match read(&message) {
         Ok(body) => {
             let mut posts_to_delete = Vec::new();
@@ -30,10 +29,10 @@ pub async fn process(message: String, client: &reqwest::Client) {
                     }
                     // update stored the cursor every 20 events or so
                     if commit.time_us.rem_euclid(20) == 0 {
-                        let cursor_endpoint = format!("{}/cursor", default_queue_path);
+                        let cursor_endpoint = format!("{}/cursor", queue_path);
                         let resp = update_cursor(
                             cursor_endpoint,
-                            default_subscriber_path,
+                            subscriber_path.to_string(),
                             &commit.time_us,
                             client,
                         )
@@ -165,7 +164,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
             }
 
             if !posts_to_create.is_empty() {
-                let queue_endpoint = format!("{}/queue/{}/create", default_queue_path, "posts");
+                let queue_endpoint = format!("{}/queue/{}/create", queue_path, "posts");
                 let resp = queue_create(queue_endpoint, posts_to_create, client).await;
                 match resp {
                     Ok(response) => tracing::info!("Records queued: {:?}", response.status()),
@@ -173,7 +172,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
                 };
             }
             if !posts_to_delete.is_empty() {
-                let queue_endpoint = format!("{}/queue/{}/delete", default_queue_path, "posts");
+                let queue_endpoint = format!("{}/queue/{}/delete", queue_path, "posts");
                 let resp = queue_delete(queue_endpoint, posts_to_delete, client).await;
                 match resp {
                     Ok(()) => (),
@@ -181,7 +180,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
                 };
             }
             if !reposts_to_create.is_empty() {
-                let queue_endpoint = format!("{}/queue/{}/create", default_queue_path, "reposts");
+                let queue_endpoint = format!("{}/queue/{}/create", queue_path, "reposts");
                 let resp = queue_create(queue_endpoint, reposts_to_create, client).await;
                 match resp {
                     Ok(response) => tracing::info!("Records queued: {:?}", response.status()),
@@ -189,7 +188,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
                 };
             }
             if !reposts_to_delete.is_empty() {
-                let queue_endpoint = format!("{}/queue/{}/delete", default_queue_path, "reposts");
+                let queue_endpoint = format!("{}/queue/{}/delete", queue_path, "reposts");
                 let resp = queue_delete(queue_endpoint, reposts_to_delete, client).await;
                 match resp {
                     Ok(()) => (),
@@ -197,7 +196,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
                 };
             }
             if !likes_to_create.is_empty() {
-                let queue_endpoint = format!("{}/queue/{}/create", default_queue_path, "likes");
+                let queue_endpoint = format!("{}/queue/{}/create", queue_path, "likes");
                 let resp = queue_create(queue_endpoint, likes_to_create, client).await;
                 match resp {
                     Ok(response) => tracing::info!("Records queued: {:?}", response.status()),
@@ -205,7 +204,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
                 };
             }
             if !likes_to_delete.is_empty() {
-                let queue_endpoint = format!("{}/queue/{}/delete", default_queue_path, "likes");
+                let queue_endpoint = format!("{}/queue/{}/delete", queue_path, "likes");
                 let resp = queue_delete(queue_endpoint, likes_to_delete, client).await;
                 match resp {
                     Ok(()) => (),
@@ -213,7 +212,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
                 };
             }
             if !follows_to_create.is_empty() {
-                let queue_endpoint = format!("{}/queue/{}/create", default_queue_path, "follows");
+                let queue_endpoint = format!("{}/queue/{}/create", queue_path, "follows");
                 let resp = queue_create(queue_endpoint, follows_to_create, client).await;
                 match resp {
                     Ok(response) => tracing::info!("Records queued: {:?}", response.status()),
@@ -221,7 +220,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
                 };
             }
             if !follows_to_delete.is_empty() {
-                let queue_endpoint = format!("{}/queue/{}/delete", default_queue_path, "follows");
+                let queue_endpoint = format!("{}/queue/{}/delete", queue_path, "follows");
                 let resp = queue_delete(queue_endpoint, follows_to_delete, client).await;
                 match resp {
                     Ok(()) => (),
