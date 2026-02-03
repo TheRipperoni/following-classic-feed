@@ -61,7 +61,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
                                         uri: uri.to_owned(),
                                         cid: cid.unwrap().to_string(),
                                         author: commit.did.to_owned(),
-                                        record: Lexicon::AppBskyFeedPost(post),
+                                        record: post,
                                     };
                                     posts_to_create.push(create);
                                 }
@@ -75,7 +75,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
                                         uri: uri.to_owned(),
                                         cid: cid.unwrap().to_string(),
                                         author: commit.did.to_owned(),
-                                        record: Lexicon::AppBskyFeedRepost(repost),
+                                        record: repost,
                                     };
                                     reposts_to_create.push(create);
                                 }
@@ -89,7 +89,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
                                         uri: uri.to_owned(),
                                         cid: cid.unwrap().to_string(),
                                         author: commit.did.to_owned(),
-                                        record: Lexicon::AppBskyFeedLike(like),
+                                        record: like,
                                     };
                                     likes_to_create.push(create);
                                 }
@@ -103,7 +103,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
                                         uri: uri.to_owned(),
                                         cid: cid.unwrap().to_string(),
                                         author: commit.did.to_owned(),
-                                        record: Lexicon::AppBskyFeedFollow(follow),
+                                        record: follow,
                                     };
                                     follows_to_create.push(create);
                                 }
