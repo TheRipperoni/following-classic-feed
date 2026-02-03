@@ -66,7 +66,9 @@ function App() {
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
               <Activity className="text-blue-500" />
-              Following Classic Stats
+              <a href="https://following.ripperoni.com" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition-colors">
+                Following Ripperoni Stats
+              </a>
             </h1>
             <p className="text-gray-500 dark:text-gray-400">Real-time usage and visitor monitoring</p>
           </div>

@@ -53,17 +53,17 @@ pub struct JetstreamRepoCommit {
 #[derive(Debug, serde_derive::Deserialize, serde_derive::Serialize, PartialEq)]
 #[serde(tag = "$type")]
 pub enum Lexicon {
-    #[serde(rename(deserialize = "app.bsky.feed.post"))]
+    #[serde(rename(deserialize = "app.bsky.feed.post", serialize = "app.bsky.feed.post"))]
     AppBskyFeedPost(Box<Post>),
-    #[serde(rename(deserialize = "app.bsky.feed.repost"))]
+    #[serde(rename(deserialize = "app.bsky.feed.repost", serialize = "app.bsky.feed.repost"))]
     AppBskyFeedRepost(Repost),
-    #[serde(rename(deserialize = "app.bsky.feed.like"))]
+    #[serde(rename(deserialize = "app.bsky.feed.like", serialize = "app.bsky.feed.like"))]
     AppBskyFeedLike(Like),
-    #[serde(rename(deserialize = "app.bsky.graph.follow"))]
+    #[serde(rename(deserialize = "app.bsky.graph.follow", serialize = "app.bsky.graph.follow"))]
     AppBskyFeedFollow(Follow),
-    #[serde(rename(deserialize = "app.bsky.feed.threadgate"))]
+    #[serde(rename(deserialize = "app.bsky.feed.threadgate", serialize = "app.bsky.feed.threadgate"))]
     AppBskyThreadgate(Threadgate),
-    #[serde(rename(deserialize = "app.bsky.actor.profile"))]
+    #[serde(rename(deserialize = "app.bsky.actor.profile", serialize = "app.bsky.actor.profile"))]
     AppBskyActorProfile(Profile),
 }
 

@@ -10,7 +10,7 @@ pub async fn queue_delete(
         "Pass a valid preshared token via `API_KEY` environment variable.".to_string()
     })?;
     client
-        .put(url)
+        .post(url)
         .json(&records)
         .header("X-KEY", token)
         .header("Connection", "Keep-Alive")
@@ -22,14 +22,14 @@ pub async fn queue_delete(
 
 pub async fn queue_create<T: serde::ser::Serialize>(
     url: String,
-    records: Vec<CreateOp<T>>,
+    records: Vec<T>,
     client: &reqwest::Client,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let token = env::var("API_KEY").map_err(|_| {
         "Pass a valid preshared token via `API_KEY` environment variable.".to_string()
     })?;
     client
-        .put(url)
+        .post(url)
         .json(&records)
         .header("X-KEY", token)
         .header("Connection", "Keep-Alive")
@@ -48,10 +48,13 @@ pub async fn update_cursor(
     let token = env::var("API_KEY").map_err(|_| {
         "Pass a valid preshared token via `API_KEY` environment variable.".to_string()
     })?;
-    let query = vec![("service", service), ("sequence", sequence.to_string())];
+    let body = SubState {
+        service,
+        cursor: *sequence,
+    };
     client
         .put(url)
-        .query(&query)
+        .json(&body)
         .header("X-KEY", token)
         .header("Accept", "application/json")
         .send()
