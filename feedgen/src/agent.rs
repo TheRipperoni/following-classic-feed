@@ -1,10 +1,22 @@
 use crate::models::Follow;
+use bsky_sdk::api::agent::Configure;
 use bsky_sdk::api::com::atproto::repo::list_records::Record;
 use bsky_sdk::api::types::string::{AtIdentifier, Nsid};
 use bsky_sdk::api::types::Unknown;
 use bsky_sdk::BskyAgent;
 use ipld_core::ipld::Ipld;
 use std::str::FromStr;
+
+#[tracing::instrument]
+pub async fn determine_pds(did: &str) -> String {
+    match identity::determine_pds(did).await {
+        Ok(pds) => pds,
+        Err(e) => {
+            tracing::error!("Error resolving PDS for {}: {}", did, e);
+            "https://bsky.social".to_string() // Fallback
+        }
+    }
+}
 
 #[tracing::instrument(skip(agent))]
 pub async fn get_follows(agent: &BskyAgent, did: &str) -> Vec<Follow> {
@@ -13,6 +25,9 @@ pub async fn get_follows(agent: &BskyAgent, did: &str) -> Vec<Follow> {
     let mut follows = Vec::new();
     let mut cursor: Option<String> = None;
 
+    let endpoint = determine_pds(did).await;
+    agent.configure_endpoint(endpoint);
+    
     match agent
         .api
         .com
@@ -130,6 +145,19 @@ pub async fn get_follows(agent: &BskyAgent, did: &str) -> Vec<Follow> {
         }
     }
     follows
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_determine_pds() {
+        let did = "did:plc:z72i7hdynmk606qw7fm6zsk2"; // Example DID
+        let pds = determine_pds(did).await;
+        println!("PDS for {}: {}", did, pds);
+        assert!(pds.starts_with("https://"));
+    }
 }
 
 pub async fn get_agent() -> anyhow::Result<BskyAgent> {
