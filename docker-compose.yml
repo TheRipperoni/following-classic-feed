@@ -24,7 +24,7 @@ services:
     container_name: feedgen
     image: ghcr.io/theripperoni/feedgen:main
     ports:
-      - "8003:80"
+      - "8003:8000"
     restart: unless-stopped
     depends_on:
       - db
