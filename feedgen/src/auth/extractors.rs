@@ -57,6 +57,7 @@ where
 {
     type Rejection = (StatusCode, Json<InternalErrorMessageResponse>);
 
+    #[tracing::instrument(skip(parts, state))]
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let resolver = IdResolver::from_ref(state);
 

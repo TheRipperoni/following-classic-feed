@@ -27,11 +27,13 @@ pub struct FeedSkeletonParams {
     pub cursor: Option<String>,
 }
 
+#[tracing::instrument(skip(connection))]
 pub async fn index(
     State(connection): State<ReadReplicaConn>,
     Query(params): Query<FeedSkeletonParams>,
     OptionalAccessToken(token): OptionalAccessToken,
 ) -> Response {
+    tracing::info!("Feed request received");
     let mut did = String::from("did:plc:jipcqdf3d36yhk3dzvjbkh6y");
     let feed = params.feed.unwrap_or_default();
     if let Some(jwt) = token {
