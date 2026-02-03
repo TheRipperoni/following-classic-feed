@@ -58,6 +58,9 @@ impl DidResolver {
         if split[0] != "did" {
             bail!(Error::PoorlyFormattedDidError(did))
         }
+        if split[1] == "key" {
+            return Ok(None);
+        }
         match self.methods.get(split[1]) {
             None => bail!(Error::UnsupportedDidMethodError(did)),
             Some(method) => method.resolve_no_check(did).await,
@@ -112,15 +115,20 @@ impl DidResolver {
                 match from_cache {
                     None => (),
                     Some(from_cache) if !from_cache.expired => {
-                        if from_cache.stale {
-                            self.refresh_cache(did).await?;
-                        }
                         return Ok(Some(from_cache.doc));
                     }
                     _ => (),
                 }
             }
             _ => (),
+        }
+
+        let split = did.split(":").collect::<Vec<&str>>();
+        if split[0] != "did" {
+            bail!(Error::PoorlyFormattedDidError(did))
+        }
+        if split[1] == "key" {
+            return Ok(None);
         }
 
         match self.resolve_no_cache(&did).await? {
@@ -146,7 +154,18 @@ impl DidResolver {
     ) -> Result<DidDocument> {
         let force_refresh = force_refresh.unwrap_or(false);
         match self.resolve(did.to_string(), Some(force_refresh)).await? {
-            None => bail!(Error::DidNotFoundError(did.to_string())),
+            None => {
+                let split = did.split(":").collect::<Vec<&str>>();
+                if split.len() >= 2 && split[1] == "key" {
+                    // check cache one last time just in case
+                    if let Some(ref cache) = self.cache {
+                        if let Ok(Some(res)) = cache.check_cache(did.to_string()) {
+                            return Ok(res.doc);
+                        }
+                    }
+                }
+                bail!(Error::DidNotFoundError(did.to_string()))
+            }
             Some(result) => Ok(result),
         }
     }

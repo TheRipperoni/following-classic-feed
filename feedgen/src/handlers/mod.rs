@@ -1,4 +1,4 @@
-use crate::auth::extractors::{ApiKey, OptionalAccessToken};
+use crate::auth::extractors::{AccessToken, ApiKey, OptionalAccessToken};
 use crate::models::{
     AlgoResponse, CreateRequest, DeleteRequest, FollowingPreference, InternalErrorCode,
     InternalErrorMessageResponse, JanitorConfig, JwtParts, KnownService, NotFoundErrorCode,
@@ -31,42 +31,35 @@ pub struct FeedSkeletonParams {
 pub async fn index(
     State(connection): State<ReadReplicaConn>,
     Query(params): Query<FeedSkeletonParams>,
-    OptionalAccessToken(token): OptionalAccessToken,
+    jwt: AccessToken,
 ) -> Response {
-    tracing::info!("Feed request received");
-    let mut did = String::from("did:plc:jipcqdf3d36yhk3dzvjbkh6y");
+    let did: String;
     let feed = params.feed.unwrap_or_default();
-    if let Some(jwt) = token {
-        match serde_json::from_str::<JwtParts>(&jwt.0) {
-            Ok(jwt_obj) => {
-                did = jwt_obj.iss;
-                tracing::info!("Visit from {did}");
-                tracing::info!("{}", jwt.0);
-                match apis::add_visitor(did.clone(), jwt_obj.aud, feed.to_string(), connection.clone()).await {
-                    Ok(_) => tracing::info!("Visitor added"),
-                    Err(error) => tracing::error!("Failed to write visitor: {error}"),
-                }
-            }
-            Err(e) => {
-                tracing::error!(%e, "Failed to parse jwt string")
+    match serde_json::from_str::<JwtParts>(&jwt.0) {
+        Ok(jwt_obj) => {
+            did = jwt_obj.iss;
+            tracing::info!("Visit from {did}");
+            tracing::info!("{}", jwt.0);
+            match apis::add_visitor(
+                did.clone(),
+                jwt_obj.aud,
+                feed.to_string(),
+                connection.clone(),
+            )
+            .await
+            {
+                Ok(_) => tracing::info!("Visitor added"),
+                Err(error) => tracing::error!("Failed to write visitor: {error}"),
             }
         }
-    } else {
-        let service_did = env::var("FEEDGEN_SERVICE_DID").unwrap_or("".into());
-        match apis::add_visitor("anonymous".into(), service_did, feed.to_string(), connection.clone()).await {
-            Ok(_) => tracing::info!("Anonymous visitor"),
-            Err(error) => tracing::error!("Failed to write visitor: {error}"),
+        Err(e) => {
+            tracing::error!(%e, "Failed to parse jwt string");
+            return { StatusCode::BAD_REQUEST }.into_response();
         }
     }
+
     match feed.as_str() {
         _following_classic if FOLLOWING_CLASSIC == _following_classic => {
-            if did.is_empty() {
-                let internal_error = InternalErrorMessageResponse {
-                    code: Some(InternalErrorCode::InternalError),
-                    message: Some("No DID".to_string()),
-                };
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(internal_error)).into_response();
-            }
             match apis::get_posts_by_user_feed(
                 did,
                 params.limit,

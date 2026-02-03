@@ -1118,6 +1118,7 @@ pub async fn queue_deletion(
     result
 }
 
+#[tracing::instrument(skip(connection))]
 pub async fn update_cursor(
     service: String,
     sequence: i64,
@@ -1167,7 +1168,8 @@ pub async fn add_visitor(
                     visited_at.eq(format!("{}", dt.format("%+"))),
                     feed.eq(requested_feed),
                 ))
-                .execute(conn).expect("Error inserting visitor records");
+                .execute(conn)
+                .expect("Error inserting visitor records");
             Ok(())
         })
         .await
