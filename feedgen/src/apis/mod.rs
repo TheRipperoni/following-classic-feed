@@ -1341,3 +1341,59 @@ pub async fn update_janitor_config(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_did_list() {
+        let dids = vec!["did:plc:123".to_string(), "did:plc:456".to_string()];
+        assert_eq!(format_did_list(&dids), "'did:plc:123','did:plc:456'");
+
+        let empty: Vec<String> = vec![];
+        assert_eq!(format_did_list(&empty), "");
+    }
+
+    #[test]
+    fn test_generate_cursor_from_last_post() {
+        let post = Post {
+            uri: "at://did:plc:abc/app.bsky.feed.post/123".to_string(),
+            cid: "bafyreih".to_string(),
+            indexed_at: "2023-10-20T10:00:00.000000+00:00".to_string(),
+            ..Default::default()
+        };
+        let cursor = generate_cursor_from_last_post(Some(&post)).unwrap();
+        // 2023-10-20T10:00:00Z is 1697796000000 ms
+        assert_eq!(cursor, "1697796000000::bafyreih");
+
+        assert!(generate_cursor_from_last_post(None).is_none());
+    }
+
+    #[test]
+    fn test_apply_cursor_to_queries() {
+        let query = "SELECT * FROM posts";
+        let repost_query = "SELECT * FROM reposts";
+        let cursor = "1697796000000::bafyreih";
+        let (q, rq) = apply_cursor_to_queries(cursor, query, repost_query).unwrap();
+
+        println!("Generated query: {}", q);
+        println!("Generated repost query: {}", rq);
+
+        // 1697796000000 is 2023-10-20T10:00:00Z.
+        // The function adds 230ms: 2023-10-20T10:00:00.230Z
+        // We check if it contains the expected parts.
+        assert!(q.contains("SELECT * FROM posts"));
+        assert!(q.contains("AND (\"indexedAt\" < '2023-10-20T10:00:00.230"));
+        assert!(rq.contains("SELECT * FROM reposts"));
+        assert!(rq.contains("WHERE (\"indexedAt\" < '2023-10-20T10:00:00.230"));
+    }
+
+    #[test]
+    fn test_apply_cursor_to_queries_malformed() {
+        let query = "SELECT * FROM posts";
+        let repost_query = "SELECT * FROM reposts";
+        let result = apply_cursor_to_queries("invalid", query, repost_query);
+        assert!(result.is_err());
+    }
+}
