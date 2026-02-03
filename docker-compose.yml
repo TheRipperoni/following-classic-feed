@@ -1,7 +1,7 @@
 services:
   db:
     container_name: db
-    image: postgres:14.11-bookworm
+    image: postgres:16-bookworm
     restart: unless-stopped
     volumes:
         - type: bind
