@@ -27,8 +27,9 @@ async fn main() {
         .parse()
         .unwrap();
 
-    let subscriber = tracing_subscriber::FmtSubscriber::new();
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
 
     let mgr_write = deadpool_diesel::postgres::Manager::new(
         write_database_url,

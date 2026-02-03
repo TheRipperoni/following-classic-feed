@@ -15,8 +15,9 @@ async fn main() {
     let wanted_collections = env::var("WANTED_COLLECTIONS")
         .unwrap_or("wantedCollections=app.bsky.feed.post&wantedCollections=app.bsky.feed.repost&wantedCollections=app.bsky.graph.follow&wantedCollections=app.bsky.feed.like".into());
     let client = reqwest::Client::new();
-    let subscriber = tracing_subscriber::FmtSubscriber::new();
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
 
     let mut cursor: Option<i64> = None;
 

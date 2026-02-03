@@ -1,4 +1,4 @@
-use crate::models::{CreateOp, DeleteOp};
+use crate::models::DeleteOp;
 use std::env;
 
 pub async fn queue_delete(
