@@ -168,7 +168,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
                 let queue_endpoint = format!("{}/queue/{}/create", default_queue_path, "posts");
                 let resp = queue_create(queue_endpoint, posts_to_create, client).await;
                 match resp {
-                    Ok(()) => (),
+                    Ok(response) => tracing::info!("Records queued: {:?}", response.text().await),
                     Err(error) => tracing::error!("Records failed to queue: {error:?}"),
                 };
             }
@@ -184,7 +184,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
                 let queue_endpoint = format!("{}/queue/{}/create", default_queue_path, "reposts");
                 let resp = queue_create(queue_endpoint, reposts_to_create, client).await;
                 match resp {
-                    Ok(()) => (),
+                    Ok(response) => tracing::info! ("Records queued: {:?}", response.text().await),
                     Err(error) => tracing::error!("Records failed to queue: {error:?}"),
                 };
             }
@@ -200,7 +200,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
                 let queue_endpoint = format!("{}/queue/{}/create", default_queue_path, "likes");
                 let resp = queue_create(queue_endpoint, likes_to_create, client).await;
                 match resp {
-                    Ok(()) => (),
+                    Ok(response) => tracing::info! ("Records queued: {:?}", response.text().await),
                     Err(error) => tracing::error!("Records failed to queue: {error:?}"),
                 };
             }
@@ -216,7 +216,7 @@ pub async fn process(message: String, client: &reqwest::Client) {
                 let queue_endpoint = format!("{}/queue/{}/create", default_queue_path, "follows");
                 let resp = queue_create(queue_endpoint, follows_to_create, client).await;
                 match resp {
-                    Ok(()) => (),
+                    Ok(response) => tracing::info! ("Records queued: {:?}", response.text().await),
                     Err(error) => tracing::error!("Records failed to queue: {error:?}"),
                 };
             }

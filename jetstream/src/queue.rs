@@ -1,5 +1,6 @@
 use crate::models::DeleteOp;
 use std::env;
+use reqwest::Response;
 
 pub async fn queue_delete(
     url: String,
@@ -24,11 +25,11 @@ pub async fn queue_create<T: serde::ser::Serialize>(
     url: String,
     records: Vec<T>,
     client: &reqwest::Client,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<Response, Box<dyn std::error::Error>> {
     let token = env::var("API_KEY").map_err(|_| {
         "Pass a valid preshared token via `API_KEY` environment variable.".to_string()
     })?;
-    client
+    let response = client
         .post(url)
         .json(&records)
         .header("X-KEY", token)
@@ -36,7 +37,7 @@ pub async fn queue_create<T: serde::ser::Serialize>(
         .header("Keep-Alive", "timeout=5, max=1000")
         .send()
         .await?;
-    Ok(())
+    Ok(response)
 }
 
 pub async fn update_cursor(
