@@ -124,9 +124,10 @@ pub async fn get_follows(agent: &BskyAgent, did: &str) -> Vec<Follow> {
                                 }
                             }
 
+
                             let new_follow = Follow {
                                 uri: record.uri.clone(),
-                                cid: "record.cid".to_string(),
+                                cid: record.cid.as_ref().to_string(),
                                 author: did.to_string(),
                                 subject,
                                 created_at: created_at.clone(),
