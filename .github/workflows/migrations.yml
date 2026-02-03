@@ -38,7 +38,7 @@ jobs:
           script: |
             cd ~/deploy/
             # Run migrations using diesel-cli docker image
-            docker run --rm \
+            sudo docker run --rm \
               --network deploy_default \
               -v $(pwd)/feedgen:/app \
               -w /app \
