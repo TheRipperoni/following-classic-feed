@@ -284,8 +284,8 @@ pub async fn well_known() -> Response {
 
     if service_did.starts_with("did:") {
         let known_service = KnownService {
-            id: format!("{}#bsky_fg", service_did),
-            r#type: "AtprotoFeedGenerator".into(),
+            id: "#bsky_fg".to_string(),
+            r#type: "BskyFeedGenerator".into(),
             service_endpoint: format!("https://{}", hostname),
         };
         let result = WellKnown {
