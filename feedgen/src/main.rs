@@ -11,6 +11,7 @@ use identity::IdResolver;
 use std::env;
 use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::trace::TraceLayer;
 
 #[tokio::main]
 async fn main() {
@@ -90,6 +91,7 @@ async fn main() {
         .route("/stats", get(get_usage_stats))
         .route("/visitors", get(get_visitors))
         .with_state(state)
+        .layer(TraceLayer::new_for_http())
         .layer(cors);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8000));

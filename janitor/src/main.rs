@@ -1,17 +1,23 @@
 use chrono::Utc;
 use cron::Schedule;
 use dotenvy::dotenv;
+use tracing_subscriber::EnvFilter;
 use postgres::{Client, NoTls};
 use std::str::FromStr;
 use std::{env, thread};
 
 fn main() {
-    eprintln!("Starting Janitor");
     dotenv().ok();
+
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
+
+    tracing::info!("Starting Janitor");
     let database_url = env::var("DATABASE_URL").expect("Missing db_url");
 
     loop {
-        eprintln!("Looping");
+        tracing::info!("Looping");
         let (cron_schedule, retention_days) = get_config(database_url.as_str());
 
         let schedule =
@@ -19,11 +25,11 @@ fn main() {
 
         let now = Utc::now();
         if let Some(next) = schedule.upcoming(Utc).take(1).next() {
-            eprintln!("Next run: {next}");
+            tracing::info!("Next run: {next}");
             let until_next = next - now;
 
             if until_next.num_seconds() > 0 {
-                eprintln!("Sleeping for {x} seconds", x = until_next.num_seconds());
+                tracing::info!("Sleeping for {x} seconds", x = until_next.num_seconds());
                 thread::sleep(until_next.to_std().unwrap());
             }
             clean_db(database_url.as_str(), retention_days);
