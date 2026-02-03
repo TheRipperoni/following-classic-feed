@@ -10,6 +10,7 @@ pub async fn process(
     client: &reqwest::Client,
     queue_path: &str,
     subscriber_path: &str,
+    skip_cursor: bool,
 ) {
     match read(&message) {
         Ok(body) => {
@@ -28,7 +29,7 @@ pub async fn process(
                         tracing::info!("Operations empty.");
                     }
                     // update stored the cursor every 20 events or so
-                    if commit.time_us.rem_euclid(20) == 0 {
+                    if !skip_cursor && commit.time_us.rem_euclid(20) == 0 {
                         let cursor_endpoint = format!("{}/cursor", queue_path);
                         let resp = update_cursor(
                             cursor_endpoint,

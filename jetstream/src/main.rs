@@ -19,25 +19,32 @@ async fn main() {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
 
+    let skip_cursor = env::var("SKIP_CURSOR")
+        .unwrap_or("false".into())
+        .to_lowercase();
+    let skip_cursor = skip_cursor == "true" || skip_cursor == "1" || skip_cursor == "yes";
+
     let mut cursor: Option<i64> = None;
 
     let queue_endpoint =
         env::var("FEEDGEN_QUEUE_ENDPOINT").unwrap_or("http://127.0.0.1:8000".into());
     let cursor_endpoint = format!("{}/cursor", queue_endpoint);
 
-    match get_cursor(
-        cursor_endpoint.clone(),
-        default_subscriber_path.clone(),
-        &client,
-    )
-    .await
-    {
-        Ok(state) => {
-            tracing::info!("Starting from cursor: {}", state.cursor);
-            cursor = Some(state.cursor);
-        }
-        Err(e) => {
-            tracing::warn!("Could not fetch last cursor: {}. Starting from live.", e);
+    if !skip_cursor {
+        match get_cursor(
+            cursor_endpoint.clone(),
+            default_subscriber_path.clone(),
+            &client,
+        )
+        .await
+        {
+            Ok(state) => {
+                tracing::info!("Starting from cursor: {}", state.cursor);
+                cursor = Some(state.cursor);
+            }
+            Err(e) => {
+                tracing::warn!("Could not fetch last cursor: {}. Starting from live.", e);
+            }
         }
     }
 
@@ -77,7 +84,7 @@ async fn main() {
                         async move {
                             // Convert Utf8Bytes to String once here
                             let msg = message.to_string();
-                            process(msg, &client, &queue_path, &sub_path).await;
+                            process(msg, &client, &queue_path, &sub_path, skip_cursor).await;
                         }
                     })
                     .await;
