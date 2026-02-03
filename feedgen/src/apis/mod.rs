@@ -1143,27 +1143,37 @@ pub async fn update_cursor(
     result
 }
 
-pub fn add_visitor(
+pub async fn add_visitor(
     user: String,
     service: String,
     requested_feed: String,
-) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::schema::visitor::dsl::*;
+    connection: ReadReplicaConn,
+) -> Result<(), String> {
+    let result = connection
+        .0
+        .get()
+        .await
+        .map_err(|e| format!("Failed to get database connection: {}", e))?
+        .interact(move |conn: &mut PgConnection| {
+            use crate::schema::visitor::dsl::*;
 
-    let connection = &mut establish_connection()?;
+            let system_time = SystemTime::now();
+            let dt: DateTime<UtcOffset> = system_time.into();
 
-    let system_time = SystemTime::now();
-    let dt: DateTime<UtcOffset> = system_time.into();
+            diesel::insert_into(visitor)
+                .values((
+                    did.eq(user),
+                    web.eq(service),
+                    visited_at.eq(format!("{}", dt.format("%+"))),
+                    feed.eq(requested_feed),
+                ))
+                .execute(conn).expect("Error inserting visitor records");
+            Ok(())
+        })
+        .await
+        .map_err(|e| format!("Database interaction failed: {}", e))?;
 
-    diesel::insert_into(visitor)
-        .values((
-            did.eq(user),
-            web.eq(service),
-            visited_at.eq(format!("{}", dt.format("%+"))),
-            feed.eq(requested_feed),
-        ))
-        .execute(connection)?;
-    Ok(())
+    result
 }
 
 pub async fn get_usage_stats(

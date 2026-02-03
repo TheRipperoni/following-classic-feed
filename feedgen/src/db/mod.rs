@@ -9,24 +9,6 @@ use std::env;
 use crate::schema::following_preference::dsl::following_preference;
 use crate::schema::user_feed_preference::dsl::user_feed_preference;
 
-/// Establishes a new PostgreSQL connection using the `DATABASE_URL` environment variable.
-///
-/// # Errors
-///
-/// Returns an error if the `DATABASE_URL` is not set or if the connection fails.
-#[tracing::instrument]
-pub fn establish_connection() -> Result<PgConnection, Box<dyn std::error::Error>> {
-    dotenv().ok();
-
-    let database_url = env::var("DATABASE_URL").unwrap_or("".into());
-    let result = PgConnection::establish(&database_url).map_err(|_| {
-        tracing::error!("Error connecting to {database_url:?}");
-        "Internal error"
-    })?;
-
-    Ok(result)
-}
-
 /// Retrieves the feed preference for a specific user.
 pub fn get_user_config(_did: &str, conn: &mut PgConnection) -> Option<UserFeedPreference> {
     use crate::schema::user_feed_preference::dsl::*;
