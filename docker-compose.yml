@@ -23,6 +23,8 @@ services:
   feedgen:
     container_name: feedgen
     image: ghcr.io/theripperoni/feedgen:main
+    ports:
+      - "8003:80"
     restart: unless-stopped
     depends_on:
       - db
@@ -50,6 +52,8 @@ services:
   stats-viz:
     container_name: stats-viz
     image: ghcr.io/theripperoni/stats-viz:main
+    ports:
+      - "8002:80"
     restart: unless-stopped
     depends_on:
       - feedgen
