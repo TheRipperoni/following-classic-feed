@@ -1,6 +1,6 @@
 use crate::models::DeleteOp;
-use std::env;
 use reqwest::Response;
+use std::env;
 
 pub async fn queue_delete(
     url: String,

@@ -1,10 +1,10 @@
 use chrono::Utc;
 use cron::Schedule;
 use dotenvy::dotenv;
-use tracing_subscriber::EnvFilter;
 use postgres::{Client, NoTls};
 use std::str::FromStr;
 use std::{env, thread};
+use tracing_subscriber::EnvFilter;
 
 fn main() {
     dotenv().ok();
