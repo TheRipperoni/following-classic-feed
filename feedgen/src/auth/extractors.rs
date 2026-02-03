@@ -80,6 +80,7 @@ where
                     )
                 })?;
                 if !token.starts_with("Bearer ") {
+                    tracing::error!("Invalid token format: {}", token);
                     return Err((
                         StatusCode::UNAUTHORIZED,
                         Json(InternalErrorMessageResponse {
@@ -92,14 +93,20 @@ where
                 let service_did = env::var("FEEDGEN_SERVICE_DID").unwrap_or_default();
                 let mut resolver_inner = resolver.clone();
                 match crate::auth::verify_jwt(jwtstr, &service_did, &mut resolver_inner).await {
-                    Ok(payload) => Ok(AccessToken(payload)),
-                    Err(e) => Err((
-                        StatusCode::UNAUTHORIZED,
-                        Json(InternalErrorMessageResponse {
-                            code: Some(InternalErrorCode::Unavailable),
-                            message: Some(format!("Invalid token: {}", e)),
-                        }),
-                    )),
+                    Ok(payload) => {
+                        tracing::info!("JWT verified successfully: {}", payload);
+                        Ok(AccessToken(payload))
+                    },
+                    Err(e) => {
+                        tracing::error!("JWT verification failed: {}", e);
+                        Err((
+                            StatusCode::UNAUTHORIZED,
+                            Json(InternalErrorMessageResponse {
+                                code: Some(InternalErrorCode::Unavailable),
+                                message: Some(format!("Invalid token: {}", e)),
+                            }),
+                        ))
+                    },
                 }
             }
         }
@@ -116,7 +123,9 @@ where
 {
     type Rejection = (StatusCode, Json<InternalErrorMessageResponse>);
 
+    #[tracing::instrument(skip(parts, state))]
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        tracing::debug!("Attempting to extract access token from request parts");
         match AccessToken::from_request_parts(parts, state).await {
             Ok(token) => Ok(OptionalAccessToken(Some(token))),
             Err((status, _)) if status == StatusCode::UNAUTHORIZED => Ok(OptionalAccessToken(None)),

@@ -150,7 +150,7 @@ mod tests {
         let public_key = secp256k1::PublicKey::from_secret_key(&secp, &secret_key);
         let pubkey_bytes = public_key.serialize();
 
-        let did = crypto::did::format_did_key("ES256K".to_string(), pubkey_bytes.to_vec()).unwrap();
+        let did = format_did_key("ES256K".to_string(), pubkey_bytes.to_vec()).unwrap();
         let service_did = "did:example:feedGenerator".to_string();
 
         let header = JwtHeader {
