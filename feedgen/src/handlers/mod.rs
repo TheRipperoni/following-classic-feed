@@ -298,10 +298,7 @@ pub async fn well_known() -> Response {
     }
 }
 
-pub async fn get_usage_stats(
-    State(connection): State<ReadReplicaConn>,
-    _token: ApiKey,
-) -> Response {
+pub async fn get_usage_stats(State(connection): State<ReadReplicaConn>) -> Response {
     match apis::get_usage_stats(connection).await {
         Ok(stats) => Json(stats).into_response(),
         Err(error) => {
@@ -315,7 +312,7 @@ pub async fn get_usage_stats(
     }
 }
 
-pub async fn get_visitors(State(connection): State<ReadReplicaConn>, _token: ApiKey) -> Response {
+pub async fn get_visitors(State(connection): State<ReadReplicaConn>) -> Response {
     match apis::get_visitors(connection).await {
         Ok(visitors) => Json(visitors).into_response(),
         Err(error) => {

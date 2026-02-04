@@ -27,7 +27,7 @@ pub async fn get_follows(agent: &BskyAgent, did: &str) -> Vec<Follow> {
 
     let endpoint = determine_pds(did).await;
     agent.configure_endpoint(endpoint);
-    
+
     match agent
         .api
         .com
@@ -123,7 +123,6 @@ pub async fn get_follows(agent: &BskyAgent, did: &str) -> Vec<Follow> {
                                     created_at = <Ipld as Clone>::clone(x).try_into().unwrap();
                                 }
                             }
-
 
                             let new_follow = Follow {
                                 uri: record.uri.clone(),

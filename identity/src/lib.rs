@@ -59,7 +59,11 @@ pub async fn determine_pds(did: &str) -> Result<String> {
     let plc_url = "https://plc.directory";
     let client = reqwest::Client::new();
     let response = client
-        .get(format!("{0}/{1}", plc_url, crate::common::encode_uri_component(did)))
+        .get(format!(
+            "{0}/{1}",
+            plc_url,
+            crate::common::encode_uri_component(did)
+        ))
         .header("Connection", "Keep-Alive")
         .header("Keep-Alive", "timeout=5, max=1000")
         .send()

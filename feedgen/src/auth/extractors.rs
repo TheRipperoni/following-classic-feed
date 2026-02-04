@@ -96,7 +96,7 @@ where
                     Ok(payload) => {
                         tracing::info!("JWT verified successfully: {}", payload);
                         Ok(AccessToken(payload))
-                    },
+                    }
                     Err(e) => {
                         tracing::error!("JWT verification failed: {}", e);
                         Err((
@@ -106,7 +106,7 @@ where
                                 message: Some(format!("Invalid token: {}", e)),
                             }),
                         ))
-                    },
+                    }
                 }
             }
         }
