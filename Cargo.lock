@@ -1539,6 +1539,7 @@ name = "jetstream"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "axum",
  "chrono",
  "cid",
  "dotenvy",
@@ -1550,6 +1551,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tokio-tungstenite",
+ "tower-http",
  "tracing",
  "tracing-subscriber",
  "url",

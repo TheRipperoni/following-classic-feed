@@ -1,17 +1,22 @@
 use crate::jetstream::{read, JetstreamRepoMessage, Lexicon};
+use crate::metrics::Metrics;
 use crate::queue::{queue_create, queue_delete, update_cursor};
 use lexicon::app::bsky::feed::like::Like;
 use lexicon::app::bsky::feed::{Post, Repost};
 use lexicon::app::bsky::graph::follow::Follow;
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
 
-#[tracing::instrument]
+#[tracing::instrument(skip(metrics))]
 pub async fn process(
     message: String,
     client: &reqwest::Client,
     queue_path: &str,
     subscriber_path: &str,
     skip_cursor: bool,
+    metrics: Arc<Metrics>,
 ) {
+    metrics.messages_processed.fetch_add(1, Ordering::Relaxed);
     match read(&message) {
         Ok(body) => {
             let mut posts_to_delete = Vec::new();
@@ -64,6 +69,7 @@ pub async fn process(
                                             record: post,
                                         };
                                         posts_to_create.push(create);
+                                        metrics.posts_created.fetch_add(1, Ordering::Relaxed);
                                     }
                                     Some(Lexicon::AppBskyFeedRepost(r)) => {
                                         let repost: Repost = r;
@@ -78,6 +84,7 @@ pub async fn process(
                                             record: repost,
                                         };
                                         reposts_to_create.push(create);
+                                        metrics.reposts_created.fetch_add(1, Ordering::Relaxed);
                                     }
                                     Some(Lexicon::AppBskyFeedLike(r)) => {
                                         let like: Like = r;
@@ -92,6 +99,7 @@ pub async fn process(
                                             record: like,
                                         };
                                         likes_to_create.push(create);
+                                        metrics.likes_created.fetch_add(1, Ordering::Relaxed);
                                     }
                                     Some(Lexicon::AppBskyFeedFollow(r)) => {
                                         let follow: Follow = r;
@@ -106,6 +114,7 @@ pub async fn process(
                                             record: follow,
                                         };
                                         follows_to_create.push(create);
+                                        metrics.follows_created.fetch_add(1, Ordering::Relaxed);
                                     }
                                     _ => {}
                                 }
@@ -128,6 +137,7 @@ pub async fn process(
                                     uri: uri.to_owned(),
                                 };
                                 posts_to_delete.push(delete);
+                                metrics.posts_deleted.fetch_add(1, Ordering::Relaxed);
                             }
                             if collection == "app.bsky.feed.repost" {
                                 let uri = String::from("at://")
@@ -138,6 +148,7 @@ pub async fn process(
                                     uri: uri.to_owned(),
                                 };
                                 reposts_to_delete.push(delete);
+                                metrics.reposts_deleted.fetch_add(1, Ordering::Relaxed);
                             }
                             if collection == "app.bsky.feed.like" {
                                 let uri = String::from("at://")
@@ -148,6 +159,7 @@ pub async fn process(
                                     uri: uri.to_owned(),
                                 };
                                 likes_to_delete.push(delete);
+                                metrics.likes_deleted.fetch_add(1, Ordering::Relaxed);
                             }
                             if collection == "app.bsky.graph.follow" {
                                 let uri = String::from("at://")
@@ -158,6 +170,7 @@ pub async fn process(
                                     uri: uri.to_owned(),
                                 };
                                 follows_to_delete.push(delete);
+                                metrics.follows_deleted.fetch_add(1, Ordering::Relaxed);
                             }
                         }
                         _ => {}
@@ -236,9 +249,45 @@ pub async fn process(
                 };
             }
         }
-        Err(error) => tracing::error!(
-            "@LOG: Error unwrapping message and header: {}",
-            error.to_string()
-        ),
+        Err(error) => {
+            metrics.errors.fetch_add(1, Ordering::Relaxed);
+            tracing::error!(
+                "@LOG: Error unwrapping message and header: {}",
+                error.to_string()
+            )
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anyhow::Result;
+
+    #[tokio::test]
+    async fn test_read_commit_create_like() -> Result<()> {
+        let metrics = Arc::new(Metrics::new());
+        let data = "{\"did\":\"did:plc:uhtptnlcrj4wrxfjfcanf34q\",\"time_us\":1731539977109649,\"kind\":\"commit\",\"commit\":{\"rev\":\"3lauicnwejh2f\",\"operation\":\"create\",\"collection\":\"app.bsky.feed.like\",\"rkey\":\"3lauicnw5op2f\",\"record\":{\"$type\":\"app.bsky.feed.like\",\"createdAt\":\"2024-11-13T23:19:36.449Z\",\"subject\":{\"cid\":\"bafyreigw5ufnkavdzcczl2dusa3bcnkckhi4tscp6qsrsmg76s3ckseney\",\"uri\":\"at://did:plc:6wthaiuqiys3y7eztkpsdam2/app.bsky.feed.post/3latjcehsho2n\"}},\"cid\":\"bafyreifsdaip3s5nm3hcz4fbgkxodnils75oi3rmqhipwtom34rxw4vwdi\"}}";
+        let client = reqwest::Client::new();
+        process(data.to_string(), &client, "http://localhost", "wss://localhost", true, metrics.clone()).await;
+        
+        assert_eq!(metrics.messages_processed.load(Ordering::Relaxed), 1);
+        assert_eq!(metrics.likes_created.load(Ordering::Relaxed), 1);
+        assert_eq!(metrics.errors.load(Ordering::Relaxed), 0);
+        
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_read_error_increments_metrics() -> Result<()> {
+        let metrics = Arc::new(Metrics::new());
+        let data = "invalid json";
+        let client = reqwest::Client::new();
+        process(data.to_string(), &client, "http://localhost", "wss://localhost", true, metrics.clone()).await;
+        
+        assert_eq!(metrics.messages_processed.load(Ordering::Relaxed), 1);
+        assert_eq!(metrics.errors.load(Ordering::Relaxed), 1);
+        
+        Ok(())
     }
 }

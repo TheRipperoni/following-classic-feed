@@ -1,15 +1,30 @@
+use axum::extract::State;
+use axum::routing::get;
+use axum::{Json, Router};
 use dotenvy::dotenv;
 use futures::StreamExt as _;
+use jetstream::metrics::Metrics;
 use jetstream::processor::process;
 use jetstream::queue::get_cursor;
 use std::env;
+use std::net::SocketAddr;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio_tungstenite::tungstenite::protocol::Message;
+
+async fn health_check() -> &'static str {
+    "OK"
+}
+
+async fn get_metrics(State(metrics): State<Arc<Metrics>>) -> Json<jetstream::metrics::MetricsSnapshot> {
+    Json(metrics.snapshot())
+}
 
 #[tracing::instrument]
 #[tokio::main]
 async fn main() {
     dotenv().ok();
+    let metrics = Arc::new(Metrics::new());
     let default_subscriber_path = env::var("FEEDGEN_SUBSCRIPTION_ENDPOINT")
         .unwrap_or("wss://jetstream1.us-west.bsky.network".into());
     let wanted_collections = env::var("WANTED_COLLECTIONS")
@@ -53,6 +68,22 @@ async fn main() {
         .parse::<usize>()
         .unwrap_or(32);
 
+    let metrics_addr: SocketAddr = env::var("METRICS_ADDR")
+        .unwrap_or("0.0.0.0:3000".into())
+        .parse()
+        .expect("Invalid METRICS_ADDR");
+
+    let app = Router::new()
+        .route("/health", get(health_check))
+        .route("/metrics", get(get_metrics))
+        .with_state(metrics.clone());
+
+    tokio::spawn(async move {
+        tracing::info!("Metrics server listening on {}", metrics_addr);
+        let listener = tokio::net::TcpListener::bind(&metrics_addr).await.unwrap();
+        axum::serve(listener, app).await.unwrap();
+    });
+
     loop {
         let mut url = format!(
             "{sub}/subscribe?{filter}",
@@ -81,10 +112,12 @@ async fn main() {
                         let client = client.clone();
                         let queue_path = queue_path.clone();
                         let sub_path = sub_path.clone();
+                        let metrics = metrics.clone();
                         async move {
                             // Convert Utf8Bytes to String once here
                             let msg = message.to_string();
-                            process(msg, &client, &queue_path, &sub_path, skip_cursor).await;
+                            process(msg, &client, &queue_path, &sub_path, skip_cursor, metrics)
+                                .await;
                         }
                     })
                     .await;
