@@ -1,6 +1,7 @@
 export interface UsageStats {
   totalVisits: number;
   uniqueVisitors: number;
+  weeklyUniqueVisitors: number;
 }
 
 export interface Visitor {

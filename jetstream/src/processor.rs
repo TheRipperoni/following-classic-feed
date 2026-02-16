@@ -49,65 +49,68 @@ pub async fn process(
                     match commit.commit.operation.as_str() {
                         "update" => {}
                         "create" => {
-                            let cid = commit.commit.cid;
-                            match commit.commit.record {
-                                Some(Lexicon::AppBskyFeedPost(r)) => {
-                                    let post: Box<Post> = r;
-                                    let uri = String::from("at://")
-                                        + commit.did.as_str()
-                                        + "/app.bsky.feed.post/"
-                                        + commit.commit.rkey.as_str();
-                                    let create = crate::models::CreateOp {
-                                        uri: uri.to_owned(),
-                                        cid: cid.unwrap().to_string(),
-                                        author: commit.did.to_owned(),
-                                        record: post,
-                                    };
-                                    posts_to_create.push(create);
+                            if let Some(cid) = commit.commit.cid {
+                                match commit.commit.record {
+                                    Some(Lexicon::AppBskyFeedPost(r)) => {
+                                        let post: Box<Post> = r;
+                                        let uri = String::from("at://")
+                                            + commit.did.as_str()
+                                            + "/app.bsky.feed.post/"
+                                            + commit.commit.rkey.as_str();
+                                        let create = crate::models::CreateOp {
+                                            uri: uri.to_owned(),
+                                            cid: cid.to_string(),
+                                            author: commit.did.to_owned(),
+                                            record: post,
+                                        };
+                                        posts_to_create.push(create);
+                                    }
+                                    Some(Lexicon::AppBskyFeedRepost(r)) => {
+                                        let repost: Repost = r;
+                                        let uri = String::from("at://")
+                                            + commit.did.as_str()
+                                            + "/app.bsky.feed.repost/"
+                                            + commit.commit.rkey.as_str();
+                                        let create = crate::models::CreateOp {
+                                            uri: uri.to_owned(),
+                                            cid: cid.to_string(),
+                                            author: commit.did.to_owned(),
+                                            record: repost,
+                                        };
+                                        reposts_to_create.push(create);
+                                    }
+                                    Some(Lexicon::AppBskyFeedLike(r)) => {
+                                        let like: Like = r;
+                                        let uri = String::from("at://")
+                                            + commit.did.as_str()
+                                            + "/app.bsky.feed.like/"
+                                            + commit.commit.rkey.as_str();
+                                        let create = crate::models::CreateOp {
+                                            uri: uri.to_owned(),
+                                            cid: cid.to_string(),
+                                            author: commit.did.to_owned(),
+                                            record: like,
+                                        };
+                                        likes_to_create.push(create);
+                                    }
+                                    Some(Lexicon::AppBskyFeedFollow(r)) => {
+                                        let follow: Follow = r;
+                                        let uri = String::from("at://")
+                                            + commit.did.as_str()
+                                            + "/app.bsky.graph.follow/"
+                                            + commit.commit.rkey.as_str();
+                                        let create = crate::models::CreateOp {
+                                            uri: uri.to_owned(),
+                                            cid: cid.to_string(),
+                                            author: commit.did.to_owned(),
+                                            record: follow,
+                                        };
+                                        follows_to_create.push(create);
+                                    }
+                                    _ => {}
                                 }
-                                Some(Lexicon::AppBskyFeedRepost(r)) => {
-                                    let repost: Repost = r;
-                                    let uri = String::from("at://")
-                                        + commit.did.as_str()
-                                        + "/app.bsky.feed.repost/"
-                                        + commit.commit.rkey.as_str();
-                                    let create = crate::models::CreateOp {
-                                        uri: uri.to_owned(),
-                                        cid: cid.unwrap().to_string(),
-                                        author: commit.did.to_owned(),
-                                        record: repost,
-                                    };
-                                    reposts_to_create.push(create);
-                                }
-                                Some(Lexicon::AppBskyFeedLike(r)) => {
-                                    let like: Like = r;
-                                    let uri = String::from("at://")
-                                        + commit.did.as_str()
-                                        + "/app.bsky.feed.like/"
-                                        + commit.commit.rkey.as_str();
-                                    let create = crate::models::CreateOp {
-                                        uri: uri.to_owned(),
-                                        cid: cid.unwrap().to_string(),
-                                        author: commit.did.to_owned(),
-                                        record: like,
-                                    };
-                                    likes_to_create.push(create);
-                                }
-                                Some(Lexicon::AppBskyFeedFollow(r)) => {
-                                    let follow: Follow = r;
-                                    let uri = String::from("at://")
-                                        + commit.did.as_str()
-                                        + "/app.bsky.graph.follow/"
-                                        + commit.commit.rkey.as_str();
-                                    let create = crate::models::CreateOp {
-                                        uri: uri.to_owned(),
-                                        cid: cid.unwrap().to_string(),
-                                        author: commit.did.to_owned(),
-                                        record: follow,
-                                    };
-                                    follows_to_create.push(create);
-                                }
-                                _ => {}
+                            } else {
+                                tracing::warn!("Create operation missing CID for DID: {}, rkey: {}", commit.did, commit.commit.rkey);
                             }
                         }
                         "delete" => {

@@ -135,9 +135,9 @@ mod tests {
     use std::str::FromStr;
 
     #[test]
-    fn test_read_commit_create_like() {
+    fn test_read_commit_create_like() -> Result<()> {
         let data = "{\"did\":\"did:plc:uhtptnlcrj4wrxfjfcanf34q\",\"time_us\":1731539977109649,\"kind\":\"commit\",\"commit\":{\"rev\":\"3lauicnwejh2f\",\"operation\":\"create\",\"collection\":\"app.bsky.feed.like\",\"rkey\":\"3lauicnw5op2f\",\"record\":{\"$type\":\"app.bsky.feed.like\",\"createdAt\":\"2024-11-13T23:19:36.449Z\",\"subject\":{\"cid\":\"bafyreigw5ufnkavdzcczl2dusa3bcnkckhi4tscp6qsrsmg76s3ckseney\",\"uri\":\"at://did:plc:6wthaiuqiys3y7eztkpsdam2/app.bsky.feed.post/3latjcehsho2n\"}},\"cid\":\"bafyreifsdaip3s5nm3hcz4fbgkxodnils75oi3rmqhipwtom34rxw4vwdi\"}}";
-        let response = read(data).unwrap();
+        let response = read(data)?;
         let expected_response = JetstreamRepoCommitMessage {
             did: "did:plc:uhtptnlcrj4wrxfjfcanf34q".to_string(),
             time_us: 1731539977109649,
@@ -155,8 +155,7 @@ mod tests {
                                 .to_string(),
                         cid: Cid::from_str(
                             "bafyreigw5ufnkavdzcczl2dusa3bcnkckhi4tscp6qsrsmg76s3ckseney",
-                        )
-                        .unwrap(),
+                        )?,
                     },
                 })),
                 cid: Some(
@@ -176,12 +175,13 @@ mod tests {
                 panic!()
             }
         }
+        Ok(())
     }
 
     #[test]
-    fn test_read_commit_delete_like() {
+    fn test_read_commit_delete_like() -> Result<()> {
         let data = "{\"did\":\"did:plc:zfr76ms7mkg6ct7qldg5c3z5\",\"time_us\":1731623029598761,\"kind\":\"commit\",\"commit\":{\"rev\":\"3lawvnsupm222\",\"operation\":\"delete\",\"collection\":\"app.bsky.graph.follow\",\"rkey\":\"3kwrdj3olqr2t\"}}";
-        let response = read(data).unwrap();
+        let response = read(data)?;
         let expected_response = JetstreamRepoCommitMessage {
             did: "did:plc:zfr76ms7mkg6ct7qldg5c3z5".to_string(),
             time_us: 1731623029598761,
@@ -207,12 +207,13 @@ mod tests {
                 panic!()
             }
         }
+        Ok(())
     }
 
     #[test]
-    fn test_read_account_active() {
+    fn test_read_account_active() -> Result<()> {
         let data = "{\"did\":\"did:plc:pvvfw4tru5kvzrpra5dairkv\",\"time_us\":1731623029648609,\"kind\":\"account\",\"account\":{\"active\":true,\"did\":\"did:plc:pvvfw4tru5kvzrpra5dairkv\",\"seq\":3478739895,\"time\":\"2024-11-14T22:23:49.092Z\"}}";
-        let response = read(data).unwrap();
+        let response = read(data)?;
         let expected_response = JetstreamRepoAccountMessage {
             did: "did:plc:pvvfw4tru5kvzrpra5dairkv".to_string(),
             time_us: 1731623029648609,
@@ -221,8 +222,7 @@ mod tests {
                 active: true,
                 did: "did:plc:pvvfw4tru5kvzrpra5dairkv".to_string(),
                 seq: 3478739895,
-                time: DateTime::parse_from_str("2024-11-14T22:23:49.092Z", "%+")
-                    .unwrap()
+                time: DateTime::parse_from_str("2024-11-14T22:23:49.092Z", "%+")?
                     .to_utc(),
             },
         };
@@ -238,12 +238,13 @@ mod tests {
                 assert_eq!(account, expected_response);
             }
         }
+        Ok(())
     }
 
     #[test]
-    fn test_read_identity() {
+    fn test_read_identity() -> Result<()> {
         let data = "{\"did\":\"did:plc:sh5zdynqtvfavtkv6estb73d\",\"time_us\":1731623029695659,\"kind\":\"identity\",\"identity\":{\"did\":\"did:plc:sh5zdynqtvfavtkv6estb73d\",\"handle\":\"irlasajj.bsky.social\",\"seq\":3478739942,\"time\":\"2024-11-14T22:23:49.147Z\"}}";
-        let response = read(data).unwrap();
+        let response = read(data)?;
         let expected_response = JetstreamRepoIdentityMessage {
             did: "did:plc:sh5zdynqtvfavtkv6estb73d".to_string(),
             time_us: 1731623029695659,
@@ -252,8 +253,7 @@ mod tests {
                 did: "did:plc:sh5zdynqtvfavtkv6estb73d".to_string(),
                 handle: "irlasajj.bsky.social".to_string(),
                 seq: 3478739942,
-                time: DateTime::parse_from_str("2024-11-14T22:23:49.147Z", "%+")
-                    .unwrap()
+                time: DateTime::parse_from_str("2024-11-14T22:23:49.147Z", "%+")?
                     .to_utc(),
             },
         };
@@ -269,12 +269,13 @@ mod tests {
                 panic!()
             }
         }
+        Ok(())
     }
 
     #[test]
-    fn test_read_commit_create_profile() {
+    fn test_read_commit_create_profile() -> Result<()> {
         let data = r#"{"did":"did:plc:abc","time_us":1731623029598761,"kind":"commit","commit":{"rev":"3lawvnsupm222","operation":"create","collection":"app.bsky.actor.profile","rkey":"self","record":{"$type":"app.bsky.actor.profile","displayName":"Test User","description":"Hello World"},"cid":"bafy"}}"#;
-        let response = read(data).unwrap();
+        let response = read(data)?;
 
         match response {
             JetstreamRepoMessage::Commit(commit) => {
@@ -288,12 +289,13 @@ mod tests {
             }
             _ => panic!("Expected commit message"),
         }
+        Ok(())
     }
 
     #[test]
-    fn test_read_commit_create_threadgate() {
+    fn test_read_commit_create_threadgate() -> Result<()> {
         let data = r#"{"did":"did:plc:abc","time_us":1731623029598761,"kind":"commit","commit":{"rev":"3lawvnsupm222","operation":"create","collection":"app.bsky.feed.threadgate","rkey":"3kwrdj3olqr2t","record":{"$type":"app.bsky.feed.threadgate","createdAt":"2024-11-14T22:23:49.147Z","text":"test"},"cid":"bafy"}}"#;
-        let response = read(data).unwrap();
+        let response = read(data)?;
 
         match response {
             JetstreamRepoMessage::Commit(commit) => {
@@ -306,5 +308,6 @@ mod tests {
             }
             _ => panic!("Expected commit message"),
         }
+        Ok(())
     }
 }

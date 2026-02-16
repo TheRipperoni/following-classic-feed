@@ -7,6 +7,7 @@ use bsky_sdk::BskyAgent;
 use ipld_core::ipld::Ipld;
 use std::str::FromStr;
 
+/// Determines the Personal Data Server (PDS) endpoint for a given DID.
 #[tracing::instrument]
 pub async fn determine_pds(did: &str) -> String {
     match identity::determine_pds(did).await {
@@ -18,6 +19,7 @@ pub async fn determine_pds(did: &str) -> String {
     }
 }
 
+/// Gets the list of follows for a given DID.
 #[tracing::instrument(skip(agent))]
 pub async fn get_follows(agent: &BskyAgent, did: &str) -> Vec<Follow> {
     use bsky_sdk::api::com::atproto::repo::list_records::{Parameters, ParametersData};
@@ -147,6 +149,11 @@ pub async fn get_follows(agent: &BskyAgent, did: &str) -> Vec<Follow> {
     follows
 }
 
+pub async fn get_agent() -> anyhow::Result<BskyAgent> {
+    let agent: BskyAgent = BskyAgent::builder().build().await?;
+    Ok(agent)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -158,9 +165,4 @@ mod tests {
         println!("PDS for {}: {}", did, pds);
         assert!(pds.starts_with("https://"));
     }
-}
-
-pub async fn get_agent() -> anyhow::Result<BskyAgent> {
-    let agent: BskyAgent = BskyAgent::builder().build().await?;
-    Ok(agent)
 }

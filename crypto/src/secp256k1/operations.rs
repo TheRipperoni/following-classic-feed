@@ -34,6 +34,7 @@ pub fn verify_sig(
     }
     let secp = Secp256k1::verification_only();
     let public_key = PublicKey::from_slice(public_key)?;
+
     let data = Message::from_digest_slice(data)?;
     let sig = match is_compact {
         true => ecdsa::Signature::from_compact(sig)?,

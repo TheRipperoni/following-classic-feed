@@ -88,7 +88,7 @@ function App() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex items-center gap-4">
             <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
               <Users className="text-blue-600 dark:text-blue-400 w-6 h-6" />
@@ -105,6 +105,15 @@ function App() {
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold">Unique Visitors</p>
               <h2 className="text-3xl font-bold">{stats?.uniqueVisitors ?? '--'}</h2>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex items-center gap-4">
+            <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+              <Users className="text-purple-600 dark:text-purple-400 w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold">Weekly Unique</p>
+              <h2 className="text-3xl font-bold">{stats?.weeklyUniqueVisitors ?? '--'}</h2>
             </div>
           </div>
         </div>
