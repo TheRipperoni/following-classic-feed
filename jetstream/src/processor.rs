@@ -110,7 +110,11 @@ pub async fn process(
                                     _ => {}
                                 }
                             } else {
-                                tracing::warn!("Create operation missing CID for DID: {}, rkey: {}", commit.did, commit.commit.rkey);
+                                tracing::warn!(
+                                    "Create operation missing CID for DID: {}, rkey: {}",
+                                    commit.did,
+                                    commit.commit.rkey
+                                );
                             }
                         }
                         "delete" => {

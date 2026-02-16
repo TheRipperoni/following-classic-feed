@@ -88,7 +88,8 @@ pub struct LikeSubject {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct JetstreamRepoIdentity {
     pub did: String,
-    pub handle: String,
+    #[serde(rename = "handle", skip_serializing_if = "Option::is_none")]
+    pub handle: Option<String>,
     pub seq: i64,
     pub time: DateTime<Utc>,
 }
@@ -108,6 +109,7 @@ pub enum JetstreamRepoMessage {
     Account(JetstreamRepoAccountMessage),
 }
 
+#[tracing::instrument(skip(data))]
 pub fn read(data: &str) -> Result<JetstreamRepoMessage> {
     let data_json: serde_json::Value = serde_json::from_str(data)?;
 
@@ -115,11 +117,13 @@ pub fn read(data: &str) -> Result<JetstreamRepoMessage> {
         .as_str()
         .ok_or_else(|| anyhow::anyhow!("Missing kind"))?;
 
+    println!("Received message of kind {:?}", kind);
     let body = match kind {
         "commit" => JetstreamRepoMessage::Commit(serde_json::from_value(data_json)?),
         "account" => JetstreamRepoMessage::Account(serde_json::from_value(data_json)?),
         "identity" => JetstreamRepoMessage::Identity(serde_json::from_value(data_json)?),
         _ => {
+            tracing::warn!("Received unknown kind {:?}", kind);
             bail!(format!("Received unknown kind {:?}", kind))
         }
     };
@@ -169,10 +173,10 @@ mod tests {
                 assert_eq!(commit, Box::new(expected_response));
             }
             JetstreamRepoMessage::Identity(_) => {
-                panic!()
+                bail!("Expected commit message, got Identity")
             }
             JetstreamRepoMessage::Account(_) => {
-                panic!()
+                bail!("Expected commit message, got Account")
             }
         }
         Ok(())
@@ -201,10 +205,10 @@ mod tests {
                 assert_eq!(commit, Box::new(expected_response));
             }
             JetstreamRepoMessage::Identity(_) => {
-                panic!()
+                bail!("Expected commit message, got Identity")
             }
             JetstreamRepoMessage::Account(_) => {
-                panic!()
+                bail!("Expected commit message, got Account")
             }
         }
         Ok(())
@@ -222,17 +226,16 @@ mod tests {
                 active: true,
                 did: "did:plc:pvvfw4tru5kvzrpra5dairkv".to_string(),
                 seq: 3478739895,
-                time: DateTime::parse_from_str("2024-11-14T22:23:49.092Z", "%+")?
-                    .to_utc(),
+                time: DateTime::parse_from_str("2024-11-14T22:23:49.092Z", "%+")?.to_utc(),
             },
         };
 
         match response {
             JetstreamRepoMessage::Commit(_) => {
-                panic!()
+                bail!("Expected account message, got Commit")
             }
             JetstreamRepoMessage::Identity(_) => {
-                panic!()
+                bail!("Expected account message, got Identity")
             }
             JetstreamRepoMessage::Account(account) => {
                 assert_eq!(account, expected_response);
@@ -251,22 +254,21 @@ mod tests {
             kind: "identity".to_string(),
             identity: JetstreamRepoIdentity {
                 did: "did:plc:sh5zdynqtvfavtkv6estb73d".to_string(),
-                handle: "irlasajj.bsky.social".to_string(),
+                handle: Some("irlasajj.bsky.social".to_string()),
                 seq: 3478739942,
-                time: DateTime::parse_from_str("2024-11-14T22:23:49.147Z", "%+")?
-                    .to_utc(),
+                time: DateTime::parse_from_str("2024-11-14T22:23:49.147Z", "%+")?.to_utc(),
             },
         };
 
         match response {
             JetstreamRepoMessage::Commit(_) => {
-                panic!()
+                bail!("Expected identity message, got Commit")
             }
             JetstreamRepoMessage::Identity(identity) => {
                 assert_eq!(identity, expected_response);
             }
             JetstreamRepoMessage::Account(_) => {
-                panic!()
+                bail!("Expected identity message, got Account")
             }
         }
         Ok(())
@@ -284,10 +286,10 @@ mod tests {
                     assert_eq!(profile.display_name, Some("Test User".to_string()));
                     assert_eq!(profile.description, Some("Hello World".to_string()));
                 } else {
-                    panic!("Expected AppBskyActorProfile record");
+                    bail!("Expected AppBskyActorProfile record");
                 }
             }
-            _ => panic!("Expected commit message"),
+            _ => bail!("Expected commit message"),
         }
         Ok(())
     }
@@ -303,10 +305,10 @@ mod tests {
                 if let Some(Lexicon::AppBskyThreadgate(threadgate)) = &commit.commit.record {
                     assert_eq!(threadgate.text, "test");
                 } else {
-                    panic!("Expected AppBskyThreadgate record");
+                    bail!("Expected AppBskyThreadgate record");
                 }
             }
-            _ => panic!("Expected commit message"),
+            _ => bail!("Expected commit message"),
         }
         Ok(())
     }
