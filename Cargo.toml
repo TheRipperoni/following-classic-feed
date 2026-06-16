@@ -1,12 +1,12 @@
 [workspace]
-members = ["crypto", "feedgen", "identity", "lexicon", "syntax", "janitor", "jetstream"]
+members = ["crypto", "db-schema", "feedgen", "identity", "lexicon", "syntax", "janitor", "jetstream"]
 resolver = "2"
 
 [workspace.dependencies]
-cargo = { version = "0.94.0",features = ["vendored-openssl"] }
 lexicon = {path = "lexicon", version = "0.2.0"}
 identity = {path = "identity", version = "0.1.0"}
 crypto = {path = "crypto", version = "0.1.0"}
+db-schema = {path = "db-schema", version = "0.1.0"}
 syntax = {path = "syntax", version = "0.1.0"}
 
 [profile.release]

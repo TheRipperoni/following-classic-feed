@@ -44,3 +44,36 @@ impl Display for InternalErrorCode {
         write!(f, "{}", x)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_internal_error_code_display() {
+        assert_eq!(InternalErrorCode::NoInternalError.to_string(), "no_internal_error");
+        assert_eq!(InternalErrorCode::InternalError.to_string(), "internal_error");
+        assert_eq!(InternalErrorCode::DataLoss.to_string(), "data_loss");
+    }
+
+    #[test]
+    fn test_internal_error_code_serde_roundtrip() {
+        for code in &[
+            InternalErrorCode::NoInternalError,
+            InternalErrorCode::InternalError,
+            InternalErrorCode::Cancelled,
+            InternalErrorCode::AlreadyExists,
+            InternalErrorCode::Unavailable,
+        ] {
+            let json = serde_json::to_string(code).unwrap();
+            let deserialized: InternalErrorCode = serde_json::from_str(&json).unwrap();
+            assert_eq!(*code, deserialized);
+        }
+    }
+
+    #[test]
+    fn test_internal_error_code_deserialize() {
+        let result: InternalErrorCode = serde_json::from_str(r#""cancelled""#).unwrap();
+        assert_eq!(result, InternalErrorCode::Cancelled);
+    }
+}

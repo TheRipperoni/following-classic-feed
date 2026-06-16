@@ -1,13 +1,12 @@
 use anyhow::{bail, Result};
-use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
 pub fn atp_uri_regex(input: &str) -> Option<Vec<&str>> {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"(?i)^(at://)?((?:did:[a-z0-9:%-]+)|(?:[a-z0-9][a-z0-9.:-]*))(/[^?#\s]*)?(\?[^#\s]+)?(#[^\s]+)?$").unwrap();
-    }
+    static RE: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+        Regex::new(r"(?i)^(at://)?((?:did:[a-z0-9:%-]+)|(?:[a-z0-9][a-z0-9.:-]*))(/[^?#\s]*)?(\?[^#\s]+)?(#[^\s]+)?$").unwrap()
+    });
     RE.captures(input).map(|captures| {
         captures
             .iter()
@@ -18,9 +17,9 @@ pub fn atp_uri_regex(input: &str) -> Option<Vec<&str>> {
 }
 
 pub fn relative_regex(input: &str) -> Option<Vec<&str>> {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"(?i)^(/[^?#\s]*)?(\?[^#\s]+)?(#[^\s]+)?$").unwrap();
-    }
+    static RE: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+        Regex::new(r"(?i)^(/[^?#\s]*)?(\?[^#\s]+)?(#[^\s]+)?$").unwrap()
+    });
     RE.captures(input).map(|captures| {
         captures
             .iter()
@@ -312,5 +311,194 @@ mod tests {
     fn test_at_uri_make_no_collection() {
         let uri = AtUri::make("bob.com".to_string(), None, None).unwrap();
         assert_eq!(uri.to_string(), "at://bob.com/");
+    }
+
+    #[test]
+    fn test_at_uri_make_only_collection() {
+        let uri = AtUri::make(
+            "bob.com".to_string(),
+            Some("com.example.post".to_string()),
+            None,
+        )
+        .unwrap();
+        assert_eq!(uri.to_string(), "at://bob.com/com.example.post");
+    }
+
+    #[test]
+    fn test_at_uri_make_only_rkey() {
+        let uri = AtUri::make("bob.com".to_string(), None, Some("123".to_string()))
+            .unwrap();
+        assert_eq!(uri.to_string(), "at://bob.com/123");
+    }
+
+    #[test]
+    fn test_at_uri_did_hostname() {
+        let uri = AtUri::new(
+            "at://did:plc:abc/app.bsky.feed.post/123".to_string(),
+            None,
+        )
+        .unwrap();
+        assert_eq!(uri.get_hostname(), "did:plc:abc");
+        assert_eq!(uri.get_collection(), "app.bsky.feed.post");
+        assert_eq!(uri.get_rkey(), "123");
+    }
+
+    #[test]
+    fn test_at_uri_with_base() {
+        let uri = AtUri::new(
+            "/com.example.post/456".to_string(),
+            Some("at://bob.com".to_string()),
+        )
+        .unwrap();
+        assert_eq!(uri.host, "bob.com");
+        assert_eq!(uri.get_collection(), "com.example.post");
+        assert_eq!(uri.get_rkey(), "456");
+    }
+
+    #[test]
+    fn test_at_uri_invalid() {
+        let err = AtUri::new("".to_string(), None);
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn test_at_uri_invalid_with_hash_only() {
+        let err = AtUri::new("#hash-only".to_string(), None);
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn test_at_uri_invalid_base() {
+        let err = AtUri::new(
+            "/path".to_string(),
+            Some("".to_string()),
+        );
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn test_at_uri_invalid_relative() {
+        let err = AtUri::new(
+            "not-a-relative-path".to_string(),
+            Some("at://bob.com".to_string()),
+        );
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn test_at_uri_protocol_and_origin() {
+        let uri = AtUri::new("at://alice.com/com.example.post/1".to_string(), None).unwrap();
+        assert_eq!(uri.get_protocol(), "at:");
+        assert_eq!(uri.get_origin(), "at://alice.com");
+    }
+
+    #[test]
+    fn test_at_uri_set_hostname() {
+        let mut uri = AtUri::new("at://bob.com/com.example.post/1".to_string(), None).unwrap();
+        uri.set_hostname("alice.com".to_string());
+        assert_eq!(uri.get_hostname(), "alice.com");
+    }
+
+    #[test]
+    fn test_at_uri_set_search() {
+        let mut uri = AtUri::new("at://bob.com".to_string(), None).unwrap();
+        uri.set_search("?foo=bar&baz=qux".to_string()).unwrap();
+        assert_eq!(
+            uri.get_search().unwrap().unwrap(),
+            "foo=bar&baz=qux"
+        );
+    }
+
+    #[test]
+    fn test_at_uri_get_href() {
+        let uri = AtUri::new("at://bob.com/com.example.post/1".to_string(), None).unwrap();
+        assert_eq!(uri.get_href(), uri.to_string());
+    }
+
+    #[test]
+    fn test_at_uri_deep_pathname() {
+        let mut uri = AtUri::new(
+            "at://bob.com/com.example.post/123/more/deep".to_string(),
+            None,
+        )
+        .unwrap();
+        assert_eq!(uri.get_collection(), "com.example.post");
+        assert_eq!(uri.get_rkey(), "123");
+
+        uri.set_collection("other.collection".to_string());
+        assert_eq!(uri.get_collection(), "other.collection");
+
+        uri.set_rkey("999".to_string());
+        assert_eq!(uri.get_rkey(), "999");
+    }
+
+    #[test]
+    fn test_at_uri_rkey_before_collection() {
+        let mut uri = AtUri::new("at://bob.com".to_string(), None).unwrap();
+        uri.set_rkey("abc".to_string());
+        assert_eq!(uri.get_rkey(), "abc");
+        assert_eq!(uri.to_string(), "at://bob.com/undefined/abc");
+    }
+
+    #[test]
+    fn test_parse_invalid_str() {
+        let result = parse("").unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_parse_valid() {
+        let result = parse("at://bob.com/com.example.post/123?key=val#hash").unwrap();
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.host, "bob.com");
+        assert_eq!(parsed.pathname, "/com.example.post/123");
+        assert_eq!(parsed.search_params, vec![("key".to_string(), "val".to_string())]);
+        assert_eq!(parsed.hash, "hash");
+    }
+
+    #[test]
+    fn test_parse_relative_valid() {
+        let result = parse_relative("/com.example.post/123?key=val#hash").unwrap();
+        assert!(result.is_some());
+        let parsed = result.unwrap();
+        assert_eq!(parsed.pathname, "/com.example.post/123");
+        assert_eq!(parsed.hash, "hash");
+    }
+
+    #[test]
+    fn test_parse_relative_path_only() {
+        let result = parse_relative("/path/to/something").unwrap();
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().pathname, "/path/to/something");
+    }
+
+    #[test]
+    fn test_parse_relative_empty() {
+        let result = parse_relative("").unwrap();
+        assert!(result.is_some()); // matches the regex
+    }
+
+    #[test]
+    fn test_atp_uri_regex_did() {
+        let result = atp_uri_regex("at://did:plc:abc123/app.bsky.feed.post/1?a=b#c");
+        assert!(result.is_some());
+        let parts = result.unwrap();
+        assert_eq!(parts[1], "did:plc:abc123");
+        assert_eq!(parts[2], "/app.bsky.feed.post/1");
+        assert_eq!(parts[3], "?a=b");
+        assert_eq!(parts[4], "#c");
+    }
+
+    #[test]
+    fn test_atp_uri_regex_no_protocol() {
+        let result = atp_uri_regex("bob.com");
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_relative_regex_empty() {
+        let result = relative_regex("");
+        assert!(result.is_some());
     }
 }

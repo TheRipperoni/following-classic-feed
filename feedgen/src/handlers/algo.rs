@@ -1,5 +1,5 @@
 use crate::auth::extractors::AccessToken;
-use crate::handlers::{FOLLOWING_CLASSIC, FOLLOWING_TRAD, MEDIA};
+use crate::handlers::{FOLLOWING_CLASSIC, FOLLOWING_TRAD, MEDIA, MUTUALS};
 use crate::models::{
     AlgoResponse, FollowingPreference, InternalErrorCode, InternalErrorMessageResponse, JwtParts,
     PostResult,
@@ -93,6 +93,33 @@ pub async fn index(
                 return (StatusCode::INTERNAL_SERVER_ERROR, Json(internal_error)).into_response();
             }
             match apis::get_posts_by_following_media(
+                did,
+                params.limit,
+                params.cursor.as_deref(),
+                connection,
+            )
+            .await
+            {
+                Ok(response) => Json(response).into_response(),
+                Err(error) => {
+                    tracing::error!("Internal Error: {error}");
+                    let internal_error = InternalErrorMessageResponse {
+                        code: Some(InternalErrorCode::InternalError),
+                        message: Some(error.to_string()),
+                    };
+                    (StatusCode::INTERNAL_SERVER_ERROR, Json(internal_error)).into_response()
+                }
+            }
+        }
+        _mutuals if MUTUALS == _mutuals => {
+            if did.is_empty() {
+                let internal_error = InternalErrorMessageResponse {
+                    code: Some(InternalErrorCode::InternalError),
+                    message: Some("No DID".to_string()),
+                };
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(internal_error)).into_response();
+            }
+            match apis::get_posts_by_mutuals(
                 did,
                 params.limit,
                 params.cursor.as_deref(),

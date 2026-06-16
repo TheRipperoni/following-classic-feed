@@ -1,3 +1,4 @@
+pub mod backfill_job;
 pub mod fetched_post;
 pub mod follow;
 pub mod following_preference;

@@ -14,7 +14,7 @@ lexicon = { workspace = true }
 futures = "0.3.28"
 tokio = { version = "1.28.0", features = ["full"] }
 tokio-tungstenite = { version = "0.28.0", features = ["native-tls"] }
-axum = { version = "0.8.1", features = ["macros"] }
+axum = { version = "0.8.9", features = ["macros"] }
 tower-http = { version = "0.6.1", features = ["cors", "trace"] }
 url = "2.3.1"
 chrono = { version = "0.4.24", features = ["serde"] }

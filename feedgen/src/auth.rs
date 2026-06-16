@@ -1,7 +1,9 @@
 use crate::models::JwtParts;
 use anyhow::{anyhow, bail, Result};
 use base64::{engine::general_purpose, Engine as _};
+use identity::IdResolver;
 use serde_derive::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub mod extractors;
@@ -13,7 +15,11 @@ pub struct JwtHeader {
     pub alg: String,
 }
 
-pub async fn verify_jwt(jwtstr: &str, service_did: &String) -> Result<String> {
+pub async fn verify_jwt(
+    jwtstr: &str,
+    service_did: &String,
+    id_resolver: Option<&mut IdResolver>,
+) -> Result<String> {
     let parts = jwtstr.split(".").collect::<Vec<_>>();
 
     if parts.len() != 3 {
@@ -45,7 +51,7 @@ pub async fn verify_jwt(jwtstr: &str, service_did: &String) -> Result<String> {
 
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards")
+        .map_err(|_| anyhow!("system time is before UNIX epoch"))?
         .as_secs() as u128;
 
     if now > payload.exp {
@@ -55,6 +61,68 @@ pub async fn verify_jwt(jwtstr: &str, service_did: &String) -> Result<String> {
         bail!("jwt audience does not match service did");
     }
 
+    // Verify cryptographic signature
+    let signing_input = format!("{}.{}", parts[0], parts[1]);
+    let sig_bytes = general_purpose::URL_SAFE_NO_PAD
+        .decode(parts[2])
+        .or_else(|_| general_purpose::STANDARD_NO_PAD.decode(parts[2]))
+        .map_err(|_| anyhow!("error decoding signature"))?;
+
+    match header.alg.as_str() {
+        "ES256K" | "ES256" => {
+            let signing_key = if payload.iss.starts_with("did:key:") {
+                // did:key format is self-contained, use directly
+                payload.iss.clone()
+            } else {
+                // Need to resolve DID to get the signing key
+                match id_resolver {
+                    Some(resolver) => {
+                        let atproto_data = resolver
+                            .resolve_atproto_data(payload.iss.clone())
+                            .await
+                            .map_err(|e| anyhow!("failed to resolve DID: {}", e))?;
+                        atproto_data.signing_key
+                    }
+                    None => {
+                        bail!(
+                            "cannot verify ES256K/ES256 JWT: id_resolver required for non-did:key issuer"
+                        );
+                    }
+                }
+            };
+
+            let digest = Sha256::digest(signing_input.as_bytes());
+            let valid = crypto::verify::verify_signature(
+                &signing_key,
+                &digest,
+                &sig_bytes,
+                None,
+            )
+            .map_err(|e| anyhow!("signature verification error: {}", e))?;
+
+            if !valid {
+                bail!("jwt signature verification failed");
+            }
+        }
+        "HS256" => {
+            use hmac::{Hmac, Mac};
+            type HmacSha256 = Hmac<Sha256>;
+
+            let secret = std::env::var("JWT_SECRET")
+                .map_err(|_| anyhow!("JWT_SECRET environment variable not set"))?;
+
+            let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
+                .map_err(|_| anyhow!("invalid HMAC key"))?;
+            mac.update(signing_input.as_bytes());
+            let expected = mac.finalize().into_bytes().to_vec();
+
+            if sig_bytes != expected {
+                bail!("jwt signature verification failed");
+            }
+        }
+        _ => unreachable!(), // already validated above
+    }
+
     serde_json::to_string(&payload).map_err(|_| anyhow!("error serializing payload"))
 }
 
@@ -62,12 +130,10 @@ pub async fn verify_jwt(jwtstr: &str, service_did: &String) -> Result<String> {
 mod tests {
     use super::*;
     use crypto::did::format_did_key;
-    use identity::types::{DidDocument, VerificationMethod};
     use secp256k1::{Message, Secp256k1, SecretKey};
 
     #[tokio::test]
     async fn test_verify_jwt_success() {
-        use sha2::{Digest, Sha256};
         let secp = Secp256k1::new();
         let secret_key =
             SecretKey::from_byte_array([0xcd; 32]).expect("32 bytes, within curve order");
@@ -111,24 +177,7 @@ mod tests {
 
         let jwt = format!("{}.{}", message_str, sig_b64);
 
-        let did_doc = DidDocument {
-            context: None,
-            id: did.clone(),
-            also_known_as: None,
-            verification_method: Some(vec![VerificationMethod {
-                id: format!("{}#key-1", did),
-                r#type: "EcdsaSecp256k1VerificationKey2019".to_string(),
-                controller: did.clone(),
-                public_key_multibase: Some(did.clone()),
-            }]),
-            service: None,
-        };
-
-        let result = verify_jwt(&jwt, &service_did).await;
-        if let Err(ref e) = result {
-            println!("JWT: {}", jwt);
-            println!("Error: {:?}", e);
-        }
+        let result = verify_jwt(&jwt, &service_did, None).await;
         assert!(result.is_ok());
         let verified_payload: JwtParts = serde_json::from_str(&result.unwrap()).unwrap();
         assert_eq!(verified_payload.iss, did);
@@ -152,7 +201,7 @@ mod tests {
             general_purpose::STANDARD_NO_PAD.encode(serde_json::to_string(&payload).unwrap());
         let jwt = format!("{}.{}.sig", header_b64, payload_b64);
 
-        let result = verify_jwt(&jwt, &"did:example:feedGenerator".to_string()).await;
+        let result = verify_jwt(&jwt, &"did:example:feedGenerator".to_string(), None).await;
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
@@ -163,7 +212,6 @@ mod tests {
     #[tokio::test]
     async fn test_verify_jwt_hs256_success() {
         use hmac::{Hmac, Mac};
-        use sha2::Sha256;
         type HmacSha256 = Hmac<Sha256>;
 
         let secret = "test-secret";
@@ -199,7 +247,7 @@ mod tests {
 
         let jwt = format!("{}.{}", message_str, sig_b64);
 
-        let result = verify_jwt(&jwt, &service_did).await;
+        let result = verify_jwt(&jwt, &service_did, None).await;
         assert!(result.is_ok(), "Error: {:?}", result.err());
         let verified_payload: JwtParts = serde_json::from_str(&result.unwrap()).unwrap();
         assert_eq!(verified_payload.iss, "did:example:alice");

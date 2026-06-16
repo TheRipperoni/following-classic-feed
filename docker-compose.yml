@@ -4,11 +4,7 @@ services:
     image: postgres:16-bookworm
     restart: unless-stopped
     volumes:
-        - type: bind
-          source: /home/ubuntu/deploy/following-storage
-          target: /var/lib/postgresql/data
-          bind:
-            create_host_path: true
+      - pgdata:/var/lib/postgresql/data
     shm_size: 2gb
     env_file:
       - ./postgres.env
@@ -52,3 +48,6 @@ services:
       - feedgen
     environment:
       - API_KEY=${API_KEY:-test-key}
+
+volumes:
+  pgdata:

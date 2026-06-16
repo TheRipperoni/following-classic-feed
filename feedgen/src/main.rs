@@ -1,9 +1,12 @@
 use axum::{
+    middleware,
     routing::{get, post},
     Router,
 };
 use dotenvy::dotenv;
+use feedgen::apis::backfill_worker;
 use feedgen::handlers::*;
+use feedgen::metrics;
 use feedgen::state::AppState;
 use feedgen::{ReadReplicaConn, WriteDbConn};
 use identity::types::IdentityResolverOpts;
@@ -65,6 +68,8 @@ async fn main() {
         id_resolver,
     };
 
+    tokio::spawn(backfill_worker(state.clone()));
+
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
@@ -82,7 +87,9 @@ async fn main() {
         )
         .route("/queue/{lex}/create", post(queue_creation))
         .route("/queue/{lex}/delete", post(queue_deletion))
+        .route("/xrpc/app.bsky.feed.describeFeedGenerator", get(describe_feed_generator))
         .route("/.well-known/did.json", get(well_known))
+        .route("/health", get(health_check))
         .route("/cursor", get(get_cursor).put(update_cursor))
         .route(
             "/janitor/config",
@@ -90,8 +97,10 @@ async fn main() {
         )
         .route("/stats", get(get_usage_stats))
         .route("/visitors", get(get_visitors))
+        .route("/metrics", get(metrics::metrics_handler))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
+        .layer(middleware::from_fn(metrics::metrics_middleware))
         .layer(cors);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8000));

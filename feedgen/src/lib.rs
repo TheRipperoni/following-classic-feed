@@ -3,8 +3,6 @@ extern crate serde_derive;
 
 extern crate serde;
 extern crate serde_json;
-
-extern crate lazy_static;
 extern crate lexicon;
 
 use deadpool_diesel::postgres::{Object, Pool};
@@ -21,6 +19,7 @@ pub mod apis;
 pub mod auth;
 pub mod db;
 pub mod handlers;
+pub mod metrics;
 pub mod models;
-pub mod schema;
+pub use db_schema::schema;
 pub mod state;

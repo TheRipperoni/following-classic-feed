@@ -185,6 +185,32 @@ pub fn user_follows_indexed(did: &str, conn: &mut PgConnection) -> bool {
     !follows.is_empty()
 }
 
+/// Checks if a user is a known user of the feed.
+pub fn is_known_user(did: &str, conn: &mut PgConnection) -> bool {
+    use crate::schema::user_feed_preference::dsl::{did as user_did, user_feed_preference};
+    use crate::schema::visitor::dsl::{did as visitor_did, visitor};
+
+    let pref_exists = user_feed_preference
+        .filter(user_did.eq(did))
+        .limit(1)
+        .load::<crate::models::UserFeedPreference>(conn)
+        .map(|r| !r.is_empty())
+        .unwrap_or(false);
+
+    if pref_exists {
+        return true;
+    }
+
+    let visitor_exists = visitor
+        .filter(visitor_did.eq(did))
+        .limit(1)
+        .load::<crate::models::Visitor>(conn)
+        .map(|r| !r.is_empty())
+        .unwrap_or(false);
+
+    visitor_exists
+}
+
 /// Creates a new user feed preference record in the database.
 ///
 /// # Errors

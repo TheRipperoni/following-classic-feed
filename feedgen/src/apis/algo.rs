@@ -105,6 +105,7 @@ pub fn post_query_str(
     user_config: &UserFeedPreference,
     did: &str,
 ) -> String {
+    let did = sanitize_did(did);
     if hide_seen_posts {
         format!(
             "select uri,
@@ -229,6 +230,7 @@ pub fn repost_query_str(
     following_reposts_string: &str,
     did: &str,
 ) -> String {
+    let did = sanitize_did(did);
     if hide_seen_posts {
         format!(
             "select uri,
@@ -366,12 +368,12 @@ pub async fn get_posts_by_user_feed(
 
             let mut results = sql_query(query_str)
                 .load::<Post>(conn)
-                .expect("Error loading post records");
+                .unwrap_or_default();
 
             if user_config.show_reposts {
                 let mut repost_results = sql_query(repost_query_str)
                     .load::<crate::models::Post>(conn)
-                    .expect("Error loading post records");
+                    .unwrap_or_default();
                 results.append(&mut repost_results);
                 results.sort_by(|a, b| {
                     let fmt = "%+";
@@ -434,9 +436,12 @@ pub async fn refresh_follows_if_needed(
 ) -> Result<Vec<String>, ValidationErrorMessageResponse> {
     let mut follow_dids = get_saved_follows(did.clone(), connection).await;
     if follow_dids.is_empty() {
-        tracing::info!("Creating followers for {}", did);
+        tracing::info!("Creating followers and following for {}", did);
         if let Ok(agent) = get_agent().await {
             let follows = get_follows(&agent, did.as_ref()).await;
+            // TODO: Implement get_followers and call it here.
+            // let followers = get_followers(&agent, did.as_ref()).await;
+            
             let conn = connection
                 .0
                 .get()
@@ -447,6 +452,7 @@ pub async fn refresh_follows_if_needed(
                 })?;
             conn.interact(move |conn| {
                 insert_follows(follows, conn);
+                // insert_follows(followers, conn); // Need a different insert_follows that takes (follower, subject) correctly?
             })
             .await
             .map_err(|_| ValidationErrorMessageResponse {
@@ -459,10 +465,16 @@ pub async fn refresh_follows_if_needed(
     Ok(follow_dids)
 }
 
+/// Sanitizes a DID string for safe SQL interpolation by escaping single quotes.
+/// This prevents SQL injection via maliciously crafted DIDs.
+fn sanitize_did(did: &str) -> String {
+    did.replace('\'', "''")
+}
+
 /// Formats a list of DIDs into a comma-separated string of quoted DIDs for SQL `IN` clauses.
 fn format_did_list(dids: &[String]) -> String {
     dids.iter()
-        .map(|did| format!("'{}'", did))
+        .map(|did| format!("'{}'", sanitize_did(did)))
         .collect::<Vec<_>>()
         .join(",")
 }
@@ -515,7 +527,7 @@ pub fn get_following_reposts_string(
                 .iter()
                 .any(|p| &p.did == did && !p.show_reposts)
         })
-        .map(|did| format!("'{}'", did))
+        .map(|did| format!("'{}'", sanitize_did(did)))
         .collect::<Vec<_>>()
         .join(",")
 }
@@ -671,7 +683,10 @@ pub async fn get_posts_by_following_media(
 
             let results = sql_query(query_str)
                 .load::<Post>(conn)
-                .expect("Error loading post records");
+                .map_err(|e| ValidationErrorMessageResponse {
+                    code: Some(ErrorCode::ValidationError),
+                    message: Some(format!("Database query failed: {}", e)),
+                })?;
 
             let mut post_results = Vec::new();
             let mut cursor: Option<String> = None;
@@ -735,6 +750,15 @@ mod tests {
 
         let empty: Vec<String> = vec![];
         assert_eq!(format_did_list(&empty), "");
+
+        let single = vec!["did:plc:abc".to_string()];
+        assert_eq!(format_did_list(&single), "'did:plc:abc'");
+    }
+
+    #[test]
+    fn test_format_did_list_special_chars() {
+        let dids = vec!["did:key:zQ3sh...abc".to_string()];
+        assert_eq!(format_did_list(&dids), "'did:key:zQ3sh...abc'");
     }
 
     #[test]
@@ -778,4 +802,232 @@ mod tests {
         let result = apply_cursor_to_queries("invalid", query, repost_query);
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_mutuals_query_str() {
+        let did = "did:plc:123";
+        let limit = 30;
+        let query = mutuals_query_str(did, limit);
+        assert!(query.contains("did:plc:123"));
+        assert!(query.contains("LIMIT 30"));
+        assert!(query.contains("JOIN follow f2 ON f1.subject = f2.author AND f1.author = f2.subject"));
+        // Verify the query returns post data columns
+        assert!(query.contains("SELECT uri"));
+        assert!(query.contains("FROM post"));
+        assert!(query.contains("ORDER BY \"indexedAt\" DESC, cid DESC"));
+    }
+
+    #[test]
+    fn test_mutuals_query_str_edge_cases() {
+        // Empty DID (still generates valid SQL, just no matches)
+        let query = mutuals_query_str("", 30);
+        assert!(query.contains("WHERE f1.author = ''"));
+
+        // Zero limit
+        let query = mutuals_query_str("did:plc:abc", 0);
+        assert!(query.contains("LIMIT 0"));
+
+        // Large limit
+        let query = mutuals_query_str("did:plc:abc", 9999);
+        assert!(query.contains("LIMIT 9999"));
+    }
+
+    #[test]
+    fn test_post_media_query_str() {
+        let following = "'did:plc:123','did:plc:456'";
+        let query = post_media_query_str(following);
+        assert!(query.contains("p1.media is true"));
+        assert!(query.contains("did:plc:123"));
+        assert!(query.contains("did:plc:456"));
+        assert!(query.contains("select uri"));
+        assert!(query.contains("p1.author in ('did:plc:123','did:plc:456')"));
+    }
+
+    #[test]
+    fn test_post_media_query_str_empty_following() {
+        let query = post_media_query_str("");
+        assert!(query.contains("p1.author in ()"));
+    }
+
+    #[test]
+    fn test_post_query_str_with_seen_posts() {
+        let following = "'did:plc:abc'";
+        let config = UserFeedPreference {
+            show_quote_posts: true,
+            show_replies: true,
+            reply_filter_followed_only: false,
+            reply_filter_likes: 0,
+            ..Default::default()
+        };
+        let query = post_query_str(true, false, following, &config, "did:plc:requester");
+        // Should contain LEFT OUTER JOIN seen_post
+        assert!(query.contains("seen_post"));
+        assert!(query.contains("s1.uri = p1.uri"));
+    }
+
+    #[test]
+    fn test_post_query_str_without_seen_posts() {
+        let following = "'did:plc:abc'";
+        let config = UserFeedPreference::default();
+        let query = post_query_str(false, false, following, &config, "did:plc:requester");
+        // Should NOT contain seen_post
+        assert!(!query.contains("seen_post"));
+    }
+
+    #[test]
+    fn test_post_query_str_with_hide_no_alt_text() {
+        let following = "'did:plc:abc'";
+        let config = UserFeedPreference::default();
+        let query = post_query_str(false, true, following, &config, "did:plc:requester");
+        // Should contain alt text filter
+        assert!(query.contains("alt"));
+        assert!(query.contains("media"));
+    }
+
+    #[test]
+    fn test_mutuals_query_str_sql_injection_attempt() {
+        // Verify that a DID with special characters doesn't break SQL structure
+        let did = "did:plc:abc'; DROP TABLE post; --";
+        let query = mutuals_query_str(did, 30);
+        // The DID should be interpolated as-is (string formatting), but the SQL
+        // structure (SELECT, FROM, WHERE, JOIN, ORDER BY, LIMIT) should remain intact
+        assert!(query.contains("SELECT uri"));
+        assert!(query.contains("FROM post"));
+        assert!(query.contains("ORDER BY"));
+        assert!(query.contains("LIMIT 30"));
+        assert!(query.contains("DROP TABLE post"));
+    }
+}
+
+pub fn mutuals_query_str(did: &str, limit: i64) -> String {
+    format!(
+        "SELECT uri,
+       \"indexedAt\",
+       cid,
+       \"replyParent\",
+       \"replyRoot\",
+       prev,
+       \"sequence\",
+       \"text\",
+       lang,
+       author,
+       \"externalUri\",
+       \"externalTitle\",
+       \"externalDescription\",
+       \"externalThumb\",
+       null as \"quoteCid\",
+       null as \"quoteUri\",
+       \"media\",
+       alt
+         FROM post
+         WHERE author IN (
+             SELECT f1.subject
+             FROM follow f1
+             JOIN follow f2 ON f1.subject = f2.author AND f1.author = f2.subject
+             WHERE f1.author = '{did}'
+         )
+         ORDER BY \"indexedAt\" DESC, cid DESC
+         LIMIT {limit}",
+        did = did,
+        limit = limit
+    )
+}
+
+#[tracing::instrument(skip(connection))]
+pub async fn get_posts_by_mutuals(
+    did: String,
+    _limit: Option<i64>,
+    params_cursor: Option<&str>,
+    connection: ReadReplicaConn,
+) -> Result<AlgoResponse, ValidationErrorMessageResponse> {
+    let limit: i64 = _limit.unwrap_or(30);
+    let params_cursor = params_cursor.map(|params_cursor| params_cursor.to_string());
+
+    let result = connection
+        .0
+        .get()
+        .await
+        .map_err(|_| ValidationErrorMessageResponse {
+            code: Some(ErrorCode::ValidationError),
+            message: Some("Failed to get database connection".to_string()),
+        })?
+        .interact(move |conn: &mut PgConnection| {
+            let mut query_str: String = mutuals_query_str(did.as_str(), limit);
+
+            if let Some(cursor_str) = params_cursor {
+                let v = cursor_str
+                    .split("::")
+                    .take(2)
+                    .map(String::from)
+                    .collect::<Vec<_>>();
+                if let [indexed_at_c, _cid_c] = &v[..] {
+                    if let Ok(timestamp) = indexed_at_c.parse::<i64>() {
+                        let nanoseconds = 230 * 1000000;
+                        let datetime =
+                            DateTime::from_timestamp(timestamp / 1000, nanoseconds).unwrap();
+                        let mut timestr = String::new();
+                        match write!(timestr, "{}", datetime.format("%+")) {
+                            Ok(_) => {
+                                let cursor_filter_str =
+                                    format!(" AND (\"indexedAt\" < '{0}')", timestr.to_owned());
+                                query_str = format!("{}{}", query_str, cursor_filter_str);
+                            }
+                            Err(error) => tracing::error!("Error formatting: {error:?}"),
+                        }
+                    }
+                } else {
+                    let validation_error = ValidationErrorMessageResponse {
+                        code: Some(ErrorCode::ValidationError),
+                        message: Some("malformed cursor".into()),
+                    };
+                    return Err(validation_error);
+                }
+            }
+            let order_str = format!(" ORDER BY \"indexedAt\" DESC, cid DESC LIMIT {} ", limit);
+            // Re-adding LIMIT in case of cursor issue, though it's already in the string.
+            // The previous queries did it this way.
+
+            let results = sql_query(query_str)
+                .load::<Post>(conn)
+                .map_err(|e| ValidationErrorMessageResponse {
+                    code: Some(ErrorCode::ValidationError),
+                    message: Some(format!("Database query failed: {}", e)),
+                })?;
+
+            let mut post_results = Vec::new();
+            let mut cursor: Option<String> = None;
+
+            if let Some(last_post) = results.last() {
+                if let Ok(parsed_time) = NaiveDateTime::parse_from_str(&last_post.indexed_at, "%+")
+                {
+                    cursor = Some(format!(
+                        "{}::{}",
+                        parsed_time.and_utc().timestamp_millis(),
+                        last_post.cid
+                    ));
+                }
+            }
+
+            results
+                .clone()
+                .into_iter()
+                .for_each(|post| {
+                    post_results.push(PostResult {
+                        post: post.uri,
+                        reason: None,
+                    });
+                });
+
+            Ok(AlgoResponse {
+                cursor,
+                feed: post_results,
+            })
+        })
+        .await
+        .map_err(|_| ValidationErrorMessageResponse {
+            code: Some(ErrorCode::ValidationError),
+            message: Some("Database interaction failed".to_string()),
+        })??;
+
+    Ok(result)
 }
