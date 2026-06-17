@@ -1,4 +1,5 @@
 use crate::app::bsky::embed::record::{Record, View as ViewRecord};
+use serde::{Deserialize, Serialize};
 use crate::app::bsky::embed::{MediaUnion, MediaViewUnion};
 
 /// A representation of a record embedded in a Bluesky record (eg, a post),

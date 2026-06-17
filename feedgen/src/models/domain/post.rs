@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use crate::schema::post;
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;

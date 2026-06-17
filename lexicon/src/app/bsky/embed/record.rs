@@ -5,6 +5,7 @@ use crate::app::bsky::graph::{ListView, StarterPackViewBasic};
 use crate::app::bsky::labeler::LabelerView;
 use crate::com::atproto::label::Label;
 use crate::com::atproto::repo::StrongRef;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// A representation of a record embedded in a Bluesky record (eg, a post).

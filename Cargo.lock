@@ -868,7 +868,6 @@ dependencies = [
  "prometheus",
  "secp256k1",
  "serde",
- "serde_derive",
  "serde_json",
  "sha2",
  "tokio",
@@ -1559,7 +1558,6 @@ dependencies = [
  "lexicon",
  "reqwest 0.12.28",
  "serde",
- "serde_derive",
  "serde_json",
  "tokio",
  "tokio-tungstenite",
@@ -1635,7 +1633,6 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_cbor",
- "serde_derive",
  "serde_json",
 ]
 
@@ -2980,7 +2977,6 @@ dependencies = [
  "anyhow",
  "regex",
  "serde",
- "serde_derive",
  "url",
 ]
 

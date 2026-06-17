@@ -1,4 +1,5 @@
 use crate::com::atproto::repo::StrongRef;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(tag = "$type")]

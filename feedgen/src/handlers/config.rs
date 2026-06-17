@@ -48,8 +48,16 @@ pub async fn update_cursor(
     _token: ApiKey,
     Json(new_cursor): Json<SubState>,
 ) -> Response {
-    let service = params["service"].as_str().unwrap_or_default();
-    match apis::update_cursor(service.to_string(), new_cursor.cursor, connection).await {
+    let service = match params.get("service").and_then(|v| v.as_str()) {
+        Some(s) if !s.is_empty() => s.to_string(),
+        _ => {
+            return (StatusCode::BAD_REQUEST, Json(InternalErrorMessageResponse {
+                code: Some(InternalErrorCode::InternalError),
+                message: Some("Missing required parameter: service".to_string()),
+            })).into_response();
+        }
+    };
+    match apis::update_cursor(service, new_cursor.cursor, connection).await {
         Ok(_) => StatusCode::OK.into_response(),
         Err(error) => {
             tracing::error!("Internal Error: {error}");
@@ -68,8 +76,16 @@ pub async fn get_cursor(
     Query(params): Query<serde_json::Value>,
     _token: ApiKey,
 ) -> Response {
-    let service = params["service"].as_str().unwrap_or_default();
-    match apis::get_cursor(service.to_string(), connection).await {
+    let service = match params.get("service").and_then(|v| v.as_str()) {
+        Some(s) if !s.is_empty() => s.to_string(),
+        _ => {
+            return (StatusCode::BAD_REQUEST, Json(InternalErrorMessageResponse {
+                code: Some(InternalErrorCode::InternalError),
+                message: Some("Missing required parameter: service".to_string()),
+            })).into_response();
+        }
+    };
+    match apis::get_cursor(service, connection).await {
         Ok(response) => Json(response).into_response(),
         Err(error) => {
             tracing::error!(
@@ -104,7 +120,15 @@ pub async fn user_config(
     Query(params): Query<serde_json::Value>,
     _token: ApiKey,
 ) -> Response {
-    let did = params["did"].as_str().unwrap_or_default();
-    let response = db::user_config_fetch(did.to_string(), connection).await;
+    let did = match params.get("did").and_then(|v| v.as_str()) {
+        Some(s) if !s.is_empty() => s.to_string(),
+        _ => {
+            return (StatusCode::BAD_REQUEST, Json(InternalErrorMessageResponse {
+                code: Some(InternalErrorCode::InternalError),
+                message: Some("Missing required parameter: did".to_string()),
+            })).into_response();
+        }
+    };
+    let response = db::user_config_fetch(did, connection).await;
     Json(response).into_response()
 }

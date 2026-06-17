@@ -7,6 +7,7 @@ use crate::app::bsky::richtext::Facet;
 use crate::com::atproto::label::{Label, SelfLabels};
 use crate::com::atproto::repo::StrongRef;
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

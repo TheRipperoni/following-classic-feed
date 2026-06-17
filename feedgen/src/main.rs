@@ -20,16 +20,18 @@ use tower_http::trace::TraceLayer;
 async fn main() {
     dotenv().ok();
 
-    let write_database_url = env::var("DATABASE_URL").unwrap_or_default();
-    let read_database_url = env::var("READ_REPLICA_URL").unwrap_or_default();
+    let write_database_url = env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set");
+    let read_database_url = env::var("READ_REPLICA_URL")
+        .expect("READ_REPLICA_URL must be set");
     let write_pool_size: u32 = env::var("WRITE_POOL_SIZE")
         .unwrap_or(40.to_string())
         .parse()
-        .unwrap();
+        .expect("WRITE_POOL_SIZE must be a valid u32");
     let read_pool_size: u32 = env::var("READ_POOL_SIZE")
         .unwrap_or(40.to_string())
         .parse()
-        .unwrap();
+        .expect("READ_POOL_SIZE must be a valid u32");
 
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
@@ -68,7 +70,14 @@ async fn main() {
         id_resolver,
     };
 
-    tokio::spawn(backfill_worker(state.clone()));
+    let enable_backfill = env::var("ENABLE_BACKFILL")
+        .unwrap_or("false".to_string())
+        == "true";
+    if enable_backfill {
+        tokio::spawn(backfill_worker(state.clone()));
+    } else {
+        tracing::info!("Backfill worker disabled (set ENABLE_BACKFILL=true to enable)");
+    }
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -105,6 +114,10 @@ async fn main() {
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8000));
     tracing::info!("listening on {}", addr);
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(&addr)
+        .await
+        .expect("Failed to bind TCP listener");
+    axum::serve(listener, app)
+        .await
+        .expect("Server failed");
 }

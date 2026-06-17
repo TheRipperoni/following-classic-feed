@@ -1,4 +1,5 @@
 use crate::app::bsky::actor::ProfileViewBasic;
+use serde::{Deserialize, Serialize};
 use crate::com::atproto::label::Label;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

@@ -43,6 +43,20 @@ pub async fn backfill_worker(state: AppState) {
                             .set(backfill_job::state.eq("completed"))
                             .execute(c)
                     }).await;
+                } else if job.attempts >= 10 {
+                    info!(
+                        "Backfill job {} for DID {} has failed {} times, marking as failed",
+                        job.id, job.did, job.attempts
+                    );
+                    let _ = conn.interact(move |c| {
+                        diesel::update(backfill_job::table.find(job.id))
+                            .set((
+                                backfill_job::state.eq("failed"),
+                                backfill_job::attempts.eq(job.attempts + 1),
+                                backfill_job::last_error.eq("Max retries exceeded"),
+                            ))
+                            .execute(c)
+                    }).await;
                 } else {
                     // Error resilience: increment attempts and update last_error
                     let _ = conn.interact(move |c| {

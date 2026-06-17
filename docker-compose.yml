@@ -8,6 +8,11 @@ services:
     shm_size: 2gb
     env_file:
       - ./postgres.env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \$\${POSTGRES_USER} -d \$\${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   feedgen:
     container_name: feedgen
@@ -16,7 +21,8 @@ services:
       - "8003:8000"
     restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     env_file:
       - ./feedgen.env
 
@@ -25,7 +31,8 @@ services:
     image: ghcr.io/theripperoni/janitor:main
     restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     env_file:
       - ./janitor.env
 
@@ -34,7 +41,8 @@ services:
     image: ghcr.io/theripperoni/jetstream:main
     restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     env_file:
       - ./jetstream.env
 

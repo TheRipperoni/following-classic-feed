@@ -3,6 +3,7 @@ pub mod follow;
 use crate::app::bsky::actor::{ProfileView, ProfileViewBasic};
 use crate::app::bsky::richtext::Facet;
 use crate::com::atproto::label::Label;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

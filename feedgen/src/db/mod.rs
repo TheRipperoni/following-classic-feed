@@ -219,7 +219,7 @@ pub fn is_known_user(did: &str, conn: &mut PgConnection) -> bool {
 pub async fn user_config_creation(
     config: UserFeedPreference,
     connection: WriteDbConn,
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     use crate::schema::user_feed_preference::dsl as UserFeedSchema;
 
     let new_config = (
@@ -234,7 +234,7 @@ pub async fn user_config_creation(
         .0
         .get()
         .await
-        .map_err(|e| format!("Failed to get database connection: {}", e))?
+        .map_err(|e| anyhow::anyhow!("Failed to get database connection: {}", e))?
         .interact(move |conn: &mut PgConnection| {
             diesel::insert_into(UserFeedSchema::user_feed_preference)
                 .values(&new_config)
@@ -242,7 +242,7 @@ pub async fn user_config_creation(
                 .expect("Error inserting member records");
         })
         .await
-        .map_err(|e| format!("Database interaction failed: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Database interaction failed: {}", e))?;
     Ok(())
 }
 
@@ -292,12 +292,12 @@ pub async fn following_pref_fetch(
 pub async fn following_pref_update(
     _following_preference: FollowingPreference,
     connection: WriteDbConn,
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     connection
         .0
         .get()
         .await
-        .map_err(|e| format!("Failed to get database connection: {}", e))?
+        .map_err(|e| anyhow::anyhow!("Failed to get database connection: {}", e))?
         .interact(move |conn: &mut PgConnection| {
             use crate::schema::following_preference::author;
             use crate::schema::following_preference::did;
@@ -310,7 +310,7 @@ pub async fn following_pref_update(
                 .expect("Error update config records");
         })
         .await
-        .map_err(|e| format!("Database interaction failed: {}", e))
+        .map_err(|e| anyhow::anyhow!("Database interaction failed: {}", e))
 }
 
 /// Fetches user feed preferences for a given user DID asynchronously.
@@ -342,12 +342,12 @@ pub async fn user_config_fetch(_did: String, connection: WriteDbConn) -> Vec<Use
 pub async fn user_config_update(
     config: UserFeedPreference,
     connection: WriteDbConn,
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     connection
         .0
         .get()
         .await
-        .map_err(|e| format!("Failed to get database connection: {}", e))?
+        .map_err(|e| anyhow::anyhow!("Failed to get database connection: {}", e))?
         .interact(move |conn: &mut PgConnection| {
             diesel::update(user_feed_preference)
                 .set(config)
@@ -355,7 +355,7 @@ pub async fn user_config_update(
                 .expect("Error update config records");
         })
         .await
-        .map_err(|e| format!("Database interaction failed: {}", e))
+        .map_err(|e| anyhow::anyhow!("Database interaction failed: {}", e))
 }
 
 /**

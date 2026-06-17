@@ -352,12 +352,12 @@ pub async fn queue_creation(
     lex: String,
     body: Vec<CreateRequest>,
     connection: WriteDbConn,
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     connection
         .0
         .get()
         .await
-        .map_err(|e| format!("Failed to get database connection: {}", e))?
+        .map_err(|e| anyhow::anyhow!("Failed to get database connection: {}", e))?
         .interact(move |conn: &mut PgConnection| {
             if lex == "posts" {
                 queue_post_creation(body, conn);
@@ -368,12 +368,12 @@ pub async fn queue_creation(
             } else if lex == "follows" {
                 queue_follow_creation(body, conn);
             } else {
-                return Err(format!("Unknown lexicon received {lex:?}"));
+                return Err(anyhow::anyhow!("Unknown lexicon received {lex:?}"));
             }
             Ok(())
         })
         .await
-        .map_err(|e| format!("Database interaction failed: {}", e))??;
+        .map_err(|e| anyhow::anyhow!("Database interaction failed: {}", e))??;
     Ok(())
 }
 
@@ -382,12 +382,12 @@ pub async fn queue_deletion(
     lex: String,
     body: Vec<DeleteRequest>,
     connection: WriteDbConn,
-) -> Result<(), String> {
-    let result = connection
+) -> anyhow::Result<()> {
+    connection
         .0
         .get()
         .await
-        .map_err(|e| format!("Failed to get database connection: {}", e))?
+        .map_err(|e| anyhow::anyhow!("Failed to get database connection: {}", e))?
         .interact(move |conn: &mut PgConnection| {
             let mut delete_rows = Vec::new();
             body.into_iter()
@@ -409,8 +409,7 @@ pub async fn queue_deletion(
             Ok(())
         })
         .await
-        .map_err(|e| format!("Database interaction failed: {}", e))?;
-    result
+        .map_err(|e| anyhow::anyhow!("Database interaction failed: {}", e))?
 }
 
 #[cfg(test)]

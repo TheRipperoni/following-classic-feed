@@ -23,6 +23,7 @@ pub const HIDE_SEEN_POSTS: &str =
     "at://did:plc:cimwguwdlh2i2mebdqczgcyl/app.bsky.feed.post/3l7edu2ufdp2u";
 pub const HIDE_NOT_ALT_TEXT_POSTS: &str =
     "at://did:plc:cimwguwdlh2i2mebdqczgcyl/app.bsky.feed.post/3lbsxswsgus2f";
+pub const CURSOR_TIMESTAMP_TOLERANCE_NS: u32 = 230 * 1_000_000;
 pub const USER_PREF_OPTIONS: [&str; 6] = [
     RESET_PREF,
     DONT_SHOW_QUOTEPOSTS,
@@ -545,7 +546,7 @@ pub fn apply_cursor_to_queries(
         .collect::<Vec<_>>();
     if let [indexed_at_c, _cid_c] = &v[..] {
         if let Ok(timestamp) = indexed_at_c.parse::<i64>() {
-            let nanoseconds = 230 * 1000000;
+            let nanoseconds = CURSOR_TIMESTAMP_TOLERANCE_NS;
             let datetime = DateTime::from_timestamp(timestamp / 1000, nanoseconds).unwrap();
             let mut timestr = String::new();
             if write!(timestr, "{}", datetime.format("%+")).is_ok() {
@@ -556,6 +557,38 @@ pub fn apply_cursor_to_queries(
                     format!("{}{}", repost_query_str, cursor_repost_filter_str),
                 ));
             }
+        }
+    }
+    Err(ValidationErrorMessageResponse {
+        code: Some(ErrorCode::ValidationError),
+        message: Some("malformed cursor".into()),
+    })
+}
+
+/// Appends a cursor condition to a single SQL query string.
+fn apply_cursor_to_single_query(
+    cursor_str: &str,
+    query_str: &mut String,
+) -> Result<(), ValidationErrorMessageResponse> {
+    let v = cursor_str
+        .split("::")
+        .take(2)
+        .map(String::from)
+        .collect::<Vec<_>>();
+    if let [indexed_at_c, _cid_c] = &v[..] {
+        if let Ok(timestamp) = indexed_at_c.parse::<i64>() {
+            let nanoseconds = CURSOR_TIMESTAMP_TOLERANCE_NS;
+            let datetime = DateTime::from_timestamp(timestamp / 1000, nanoseconds).unwrap();
+            let mut timestr = String::new();
+            match write!(timestr, "{}", datetime.format("%+")) {
+                Ok(_) => {
+                    let cursor_filter_str =
+                        format!(" AND (\"indexedAt\" < '{0}')", timestr);
+                    query_str.push_str(&cursor_filter_str);
+                }
+                Err(error) => tracing::error!("Error formatting: {error:?}"),
+            }
+            return Ok(());
         }
     }
     Err(ValidationErrorMessageResponse {
@@ -650,33 +683,7 @@ pub async fn get_posts_by_following_media(
             let mut query_str: String = post_media_query_str(following.as_str());
 
             if let Some(cursor_str) = params_cursor {
-                let v = cursor_str
-                    .split("::")
-                    .take(2)
-                    .map(String::from)
-                    .collect::<Vec<_>>();
-                if let [indexed_at_c, _cid_c] = &v[..] {
-                    if let Ok(timestamp) = indexed_at_c.parse::<i64>() {
-                        let nanoseconds = 230 * 1000000;
-                        let datetime =
-                            DateTime::from_timestamp(timestamp / 1000, nanoseconds).unwrap();
-                        let mut timestr = String::new();
-                        match write!(timestr, "{}", datetime.format("%+")) {
-                            Ok(_) => {
-                                let cursor_filter_str =
-                                    format!(" AND (\"indexedAt\" < '{0}')", timestr.to_owned());
-                                query_str = format!("{}{}", query_str, cursor_filter_str);
-                            }
-                            Err(error) => tracing::error!("Error formatting: {error:?}"),
-                        }
-                    }
-                } else {
-                    let validation_error = ValidationErrorMessageResponse {
-                        code: Some(ErrorCode::ValidationError),
-                        message: Some("malformed cursor".into()),
-                    };
-                    return Err(validation_error);
-                }
+                apply_cursor_to_single_query(&cursor_str, &mut query_str)?;
             }
             let order_str = format!(" ORDER BY \"indexedAt\" DESC, cid DESC LIMIT {} ", limit);
             let query_str = format!("{}{};", &query_str, &order_str);
@@ -702,28 +709,24 @@ pub async fn get_posts_by_following_media(
                 }
             }
 
-            results
-                .clone()
-                .into_iter()
-                .map(|result| {
-                    let post_result = if let Some(quote_uri) = result.quote_uri {
-                        let reason = PostResultReason {
-                            reason_type: "app.bsky.feed.defs#skeletonReasonRepost".to_string(),
-                            repost_uri: result.uri,
-                        };
-                        PostResult {
-                            post: quote_uri,
-                            reason: Some(reason),
-                        }
-                    } else {
-                        PostResult {
-                            post: result.uri,
-                            reason: None,
-                        }
+            for result in &results {
+                let post_result = if let Some(quote_uri) = &result.quote_uri {
+                    let reason = PostResultReason {
+                        reason_type: "app.bsky.feed.defs#skeletonReasonRepost".to_string(),
+                        repost_uri: result.uri.clone(),
                     };
-                    post_results.push(post_result);
-                })
-                .for_each(drop);
+                    PostResult {
+                        post: quote_uri.clone(),
+                        reason: Some(reason),
+                    }
+                } else {
+                    PostResult {
+                        post: result.uri.clone(),
+                        reason: None,
+                    }
+                };
+                post_results.push(post_result);
+            }
 
             let new_response = AlgoResponse {
                 cursor,
@@ -900,6 +903,7 @@ mod tests {
 }
 
 pub fn mutuals_query_str(did: &str, limit: i64) -> String {
+    let sanitized_did = sanitize_did(did);
     format!(
         "SELECT uri,
        \"indexedAt\",
@@ -928,7 +932,7 @@ pub fn mutuals_query_str(did: &str, limit: i64) -> String {
          )
          ORDER BY \"indexedAt\" DESC, cid DESC
          LIMIT {limit}",
-        did = did,
+        did = sanitized_did,
         limit = limit
     )
 }
@@ -955,35 +959,9 @@ pub async fn get_posts_by_mutuals(
             let mut query_str: String = mutuals_query_str(did.as_str(), limit);
 
             if let Some(cursor_str) = params_cursor {
-                let v = cursor_str
-                    .split("::")
-                    .take(2)
-                    .map(String::from)
-                    .collect::<Vec<_>>();
-                if let [indexed_at_c, _cid_c] = &v[..] {
-                    if let Ok(timestamp) = indexed_at_c.parse::<i64>() {
-                        let nanoseconds = 230 * 1000000;
-                        let datetime =
-                            DateTime::from_timestamp(timestamp / 1000, nanoseconds).unwrap();
-                        let mut timestr = String::new();
-                        match write!(timestr, "{}", datetime.format("%+")) {
-                            Ok(_) => {
-                                let cursor_filter_str =
-                                    format!(" AND (\"indexedAt\" < '{0}')", timestr.to_owned());
-                                query_str = format!("{}{}", query_str, cursor_filter_str);
-                            }
-                            Err(error) => tracing::error!("Error formatting: {error:?}"),
-                        }
-                    }
-                } else {
-                    let validation_error = ValidationErrorMessageResponse {
-                        code: Some(ErrorCode::ValidationError),
-                        message: Some("malformed cursor".into()),
-                    };
-                    return Err(validation_error);
-                }
+                apply_cursor_to_single_query(&cursor_str, &mut query_str)?;
             }
-            let order_str = format!(" ORDER BY \"indexedAt\" DESC, cid DESC LIMIT {} ", limit);
+            let _order_str = format!(" ORDER BY \"indexedAt\" DESC, cid DESC LIMIT {} ", limit);
             // Re-adding LIMIT in case of cursor issue, though it's already in the string.
             // The previous queries did it this way.
 
@@ -1008,15 +986,12 @@ pub async fn get_posts_by_mutuals(
                 }
             }
 
-            results
-                .clone()
-                .into_iter()
-                .for_each(|post| {
-                    post_results.push(PostResult {
-                        post: post.uri,
-                        reason: None,
-                    });
+            for post in &results {
+                post_results.push(PostResult {
+                    post: post.uri.clone(),
+                    reason: None,
                 });
+            }
 
             Ok(AlgoResponse {
                 cursor,

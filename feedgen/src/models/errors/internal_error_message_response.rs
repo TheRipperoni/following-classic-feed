@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct InternalErrorMessageResponse {
     #[serde(rename = "code", skip_serializing_if = "Option::is_none")]

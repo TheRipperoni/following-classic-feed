@@ -111,7 +111,8 @@ pub async fn get_follows(agent: &BskyAgent, did: &str) -> Vec<Follow> {
                             let created_at: String;
                             match obj.get("subject") {
                                 None => {
-                                    panic!()
+                                    tracing::warn!("Follow record missing subject field, skipping");
+                                    continue;
                                 }
                                 Some(x) => {
                                     subject = <Ipld as Clone>::clone(x).try_into().unwrap();
@@ -119,7 +120,8 @@ pub async fn get_follows(agent: &BskyAgent, did: &str) -> Vec<Follow> {
                             }
                             match obj.get("createdAt") {
                                 None => {
-                                    panic!()
+                                    tracing::warn!("Follow record missing createdAt field, skipping");
+                                    continue;
                                 }
                                 Some(x) => {
                                     created_at = <Ipld as Clone>::clone(x).try_into().unwrap();

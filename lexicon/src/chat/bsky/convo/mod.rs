@@ -1,4 +1,5 @@
 use crate::app::bsky::embed::record::{Record, View as EmbedRecordView};
+use serde::{Deserialize, Serialize};
 use crate::app::bsky::richtext::Facet;
 use crate::chat::bsky::actor::ProfileViewBasic;
 use chrono::{DateTime, Utc};

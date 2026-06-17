@@ -1,4 +1,5 @@
 pub mod external;
+use serde::{Deserialize, Serialize};
 pub mod images;
 pub mod record;
 pub mod record_with_media;

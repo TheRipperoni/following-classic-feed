@@ -1,4 +1,5 @@
 /// Represents a single feed entry in the describeFeedGenerator response.
+use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct FeedDescription {
     #[serde(rename = "uri")]

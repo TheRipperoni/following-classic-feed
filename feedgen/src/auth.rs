@@ -2,7 +2,7 @@ use crate::models::JwtParts;
 use anyhow::{anyhow, bail, Result};
 use base64::{engine::general_purpose, Engine as _};
 use identity::IdResolver;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::time::{SystemTime, UNIX_EPOCH};
 

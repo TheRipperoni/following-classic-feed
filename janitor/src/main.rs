@@ -45,10 +45,18 @@ async fn main() {
             }),
         );
 
-        let addr = SocketAddr::from(([0, 0, 0, 0], 8001));
+        let port: u16 = env::var("PORT")
+            .unwrap_or("8001".to_string())
+            .parse()
+            .expect("PORT must be a valid u16");
+        let addr = SocketAddr::from(([0, 0, 0, 0], port));
         tracing::info!("Janitor health endpoint listening on {}", addr);
-        let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-        axum::serve(listener, app).await.unwrap();
+        let listener = tokio::net::TcpListener::bind(&addr)
+            .await
+            .expect("Failed to bind TCP listener");
+        axum::serve(listener, app)
+            .await
+            .expect("Server failed");
     });
 
     loop {
@@ -68,10 +76,23 @@ async fn main() {
             }
         };
 
-        let (cron_schedule, retention_days) = get_config(&mut client);
+        let (cron_schedule, retention_days) = match get_config(&mut client) {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!("Failed to fetch janitor config: {}", e);
+                db_healthy.store(false, Ordering::Relaxed);
+                tokio::time::sleep(Duration::from_secs(60)).await;
+                continue;
+            }
+        };
 
-        let schedule =
-            Schedule::from_str(cron_schedule.as_str()).expect("Failed to parse CRON expression");
+        let schedule = match Schedule::from_str(cron_schedule.as_str()) {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::error!("Invalid cron schedule '{}': {}, falling back to hourly", cron_schedule, e);
+                Schedule::from_str("0 0 * * * *").unwrap()
+            }
+        };
 
         let now = Utc::now();
         if let Some(next) = schedule.upcoming(Utc).take(1).next() {
@@ -83,41 +104,40 @@ async fn main() {
                 tracing::info!("Sleeping for {x} seconds", x = secs);
                 tokio::time::sleep(Duration::from_secs(secs)).await;
             }
-            clean_db(&mut client, retention_days);
+            if let Err(e) = clean_db(&mut client, retention_days) {
+                tracing::error!("Failed to clean database: {}", e);
+            }
         }
     }
 }
 
-fn get_config(client: &mut Client) -> (String, i32) {
+fn get_config(client: &mut Client) -> Result<(String, i32), Box<dyn std::error::Error>> {
     let row = client
         .query_one(
             "SELECT cron_schedule, retention_days FROM janitor_config ORDER BY updated_at DESC LIMIT 1",
             &[],
-        )
-        .expect("Failed to fetch janitor config");
+        )?;
 
     let cron_schedule: String = row.get(0);
     let retention_days: i32 = row.get(1);
-    (cron_schedule, retention_days)
+    Ok((cron_schedule, retention_days))
 }
 
-fn clean_db(client: &mut Client, retention_days: i32) {
+fn clean_db(client: &mut Client, retention_days: i32) -> Result<(), Box<dyn std::error::Error>> {
     client
         .execute(
             "DELETE FROM post WHERE date(\"indexedAt\") < now() - make_interval(days => $1)",
             &[&retention_days],
-        )
-        .expect("Failed to clean posts");
+        )?;
     client
         .execute(
             "DELETE FROM repost WHERE date(\"indexedAt\") < now() - make_interval(days => $1)",
             &[&retention_days],
-        )
-        .expect("Failed to clean reposts");
+        )?;
     client
         .execute(
             "DELETE FROM \"like\" WHERE date(\"indexedAt\") < now() - make_interval(days => $1)",
             &[&retention_days],
-        )
-        .expect("Failed to clean likes");
+        )?;
+    Ok(())
 }
