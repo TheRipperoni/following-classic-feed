@@ -1,5 +1,3 @@
-extern crate url;
-
 use crate::did::atproto_data::get_atproto_data;
 use crate::did::did_resolver::DidResolver;
 use crate::handle::HandleResolver;

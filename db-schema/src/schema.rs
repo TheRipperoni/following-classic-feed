@@ -1,6 +1,25 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    backfill_job (id) {
+        id -> Int4,
+        did -> Varchar,
+        state -> Varchar,
+        attempts -> Int4,
+        last_error -> Nullable<Varchar>,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    follow_refresh (did) {
+        did -> Varchar,
+        refreshed_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     fetched_post (did) {
         did -> Varchar,
         uri -> Varchar,
@@ -42,14 +61,9 @@ diesel::table! {
 diesel::table! {
     like (uri) {
         uri -> Varchar,
-        cid -> Varchar,
         author -> Varchar,
-        subjectCid -> Varchar,
         subjectUri -> Varchar,
-        createdAt -> Varchar,
         indexedAt -> Varchar,
-        prev -> Nullable<Varchar>,
-        sequence -> Nullable<Int8>,
     }
 }
 
@@ -140,8 +154,10 @@ diesel::table! {
 }
 
 diesel::allow_tables_to_appear_in_same_query!(
+    backfill_job,
     fetched_post,
     follow,
+    follow_refresh,
     following_preference,
     janitor_config,
     like,

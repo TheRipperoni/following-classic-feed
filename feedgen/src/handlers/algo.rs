@@ -1,5 +1,6 @@
+use serde::{Deserialize, Serialize};
 use crate::auth::extractors::AccessToken;
-use crate::handlers::{FOLLOWING_CLASSIC, FOLLOWING_TRAD, MEDIA};
+use crate::handlers::{FOLLOWING_CLASSIC, FOLLOWING_TRAD, MEDIA, MUTUALS};
 use crate::models::{
     AlgoResponse, FollowingPreference, InternalErrorCode, InternalErrorMessageResponse, JwtParts,
     PostResult,
@@ -111,6 +112,33 @@ pub async fn index(
                 }
             }
         }
+        _mutuals if MUTUALS == _mutuals => {
+            if did.is_empty() {
+                let internal_error = InternalErrorMessageResponse {
+                    code: Some(InternalErrorCode::InternalError),
+                    message: Some("No DID".to_string()),
+                };
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(internal_error)).into_response();
+            }
+            match apis::get_posts_by_mutuals(
+                did,
+                params.limit,
+                params.cursor.as_deref(),
+                connection,
+            )
+            .await
+            {
+                Ok(response) => Json(response).into_response(),
+                Err(error) => {
+                    tracing::error!("Internal Error: {error}");
+                    let internal_error = InternalErrorMessageResponse {
+                        code: Some(InternalErrorCode::InternalError),
+                        message: Some(error.to_string()),
+                    };
+                    (StatusCode::INTERNAL_SERVER_ERROR, Json(internal_error)).into_response()
+                }
+            }
+        }
         _ => {
             let internal_error = InternalErrorMessageResponse {
                 code: Some(InternalErrorCode::Unavailable),
@@ -131,10 +159,18 @@ pub async fn following_preferences_fetch(
     State(connection): State<WriteDbConn>,
     Query(params): Query<serde_json::Value>,
 ) -> Response {
-    let did = params["did"].as_str().unwrap_or_default();
-    let preferences = db::following_pref_fetch(did.to_string(), connection).await;
+    let did = match params.get("did").and_then(|v| v.as_str()) {
+        Some(s) if !s.is_empty() => s.to_string(),
+        _ => {
+            return (StatusCode::BAD_REQUEST, Json(InternalErrorMessageResponse {
+                code: Some(InternalErrorCode::InternalError),
+                message: Some("Missing required parameter: did".to_string()),
+            })).into_response();
+        }
+    };
+    let preferences = db::following_pref_fetch(did.clone(), connection).await;
     let response = FollowingPrefFetchResponse {
-        did: did.to_string(),
+        did,
         preferences,
     };
     Json(response).into_response()

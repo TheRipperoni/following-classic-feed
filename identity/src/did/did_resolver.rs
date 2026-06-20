@@ -170,3 +170,85 @@ impl DidResolver {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_validate_did_doc_valid() {
+        let resolver = DidResolver::new(DidResolverOpts {
+            timeout: Some(Duration::from_millis(1000)),
+            plc_url: None,
+            did_cache: DidCache::new(None, None),
+        });
+        let did = "did:plc:test123".to_string();
+        let val = json!({
+            "@context": ["https://www.w3.org/ns/did/v1"],
+            "id": "did:plc:test123",
+            "alsoKnownAs": ["at://alice.com"],
+            "verificationMethod": [{
+                "id": "did:plc:test123#atproto",
+                "type": "Multikey",
+                "controller": "did:plc:test123",
+                "publicKeyMultibase": "zQ3shOKb7HfTZnBqPcZGpKzHG8PJK7BCxQKdCzXnX8KQfnHtQ"
+            }],
+            "service": [{
+                "id": "#pds",
+                "type": "AtprotoPersonalDataServer",
+                "serviceEndpoint": "https://pds.example.com"
+            }]
+        });
+        let result = resolver.validate_did_doc(did, val);
+        assert!(result.is_ok());
+        let doc = result.unwrap();
+        assert_eq!(doc.id, "did:plc:test123");
+    }
+
+    #[test]
+    fn test_validate_did_doc_mismatched_id() {
+        let resolver = DidResolver::new(DidResolverOpts {
+            timeout: Some(Duration::from_millis(1000)),
+            plc_url: None,
+            did_cache: DidCache::new(None, None),
+        });
+        let did = "did:plc:test123".to_string();
+        let val = json!({
+            "id": "did:plc:different",
+        });
+        let result = resolver.validate_did_doc(did, val);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_did_doc_invalid_json() {
+        let resolver = DidResolver::new(DidResolverOpts {
+            timeout: Some(Duration::from_millis(1000)),
+            plc_url: None,
+            did_cache: DidCache::new(None, None),
+        });
+        let did = "did:plc:test123".to_string();
+        let val = json!({
+            "id": 123, // id should be a string
+        });
+        let result = resolver.validate_did_doc(did, val);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_did_doc_missing_id() {
+        let resolver = DidResolver::new(DidResolverOpts {
+            timeout: Some(Duration::from_millis(1000)),
+            plc_url: None,
+            did_cache: DidCache::new(None, None),
+        });
+        let did = "did:plc:test123".to_string();
+        let val = json!({
+            "alsoKnownAs": ["at://alice.com"],
+        });
+        let result = resolver.validate_did_doc(did, val);
+        // Missing id means deserialization defaults to empty string which won't match
+        assert!(result.is_err());
+    }
+}

@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
@@ -169,5 +170,40 @@ impl Display for ErrorCode {
             Self::UnsupportedSchemaVersion => String::from("unsupported_schema_version"),
         };
         write!(f, "{}", x)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_error_code_display() {
+        assert_eq!(ErrorCode::NoError.to_string(), "no_error");
+        assert_eq!(ErrorCode::ValidationError.to_string(), "validation_error");
+        assert_eq!(ErrorCode::InvalidUser.to_string(), "invalid_user");
+        assert_eq!(ErrorCode::ExceededEntityLimit.to_string(), "exceeded_entity_limit");
+        assert_eq!(ErrorCode::UnsupportedSchemaVersion.to_string(), "unsupported_schema_version");
+    }
+
+    #[test]
+    fn test_error_code_serde_roundtrip() {
+        for code in &[
+            ErrorCode::NoError,
+            ErrorCode::ValidationError,
+            ErrorCode::InvalidUser,
+            ErrorCode::ExceededEntityLimit,
+            ErrorCode::UnsupportedSchemaVersion,
+        ] {
+            let json = serde_json::to_string(code).unwrap();
+            let deserialized: ErrorCode = serde_json::from_str(&json).unwrap();
+            assert_eq!(*code, deserialized);
+        }
+    }
+
+    #[test]
+    fn test_error_code_deserialize() {
+        let result: ErrorCode = serde_json::from_str(r#""invalid_user""#).unwrap();
+        assert_eq!(result, ErrorCode::InvalidUser);
     }
 }

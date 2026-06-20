@@ -7,12 +7,15 @@ pub use self::api::algo_response::{self, AlgoResponse};
 pub use self::api::create_request::{self, CreateRequest, Lexicon};
 pub use self::api::create_user_config_request::{self, CreateUserConfigRequest};
 pub use self::api::delete_request::{self, DeleteRequest};
+pub use self::api::feed_description::{self, DescribeFeedGenerator, FeedDescription};
 pub use self::api::known_service::{self, KnownService};
 pub use self::api::usage_stats::{self, UsageStats};
 pub use self::api::well_known::{self, WellKnown};
 
+pub use self::domain::backfill_job::{self, BackfillJob};
 pub use self::domain::fetched_post::{self, FetchedPost};
 pub use self::domain::follow::{self, Follow};
+pub use self::domain::follow_refresh::{self, FollowRefresh};
 pub use self::domain::following_preference::{self, FollowingPreference};
 pub use self::domain::janitor_config::{self, JanitorConfig};
 pub use self::domain::jwt_parts::{self, JwtParts};

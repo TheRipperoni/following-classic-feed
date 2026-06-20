@@ -1,5 +1,6 @@
 use crate::models::{FetchedPost, Follow, FollowingPreference, UserFeedPreference};
 use crate::{ReadReplicaConn, WriteDbConn};
+use chrono::NaiveDateTime;
 use diesel::dsl::count;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -185,6 +186,32 @@ pub fn user_follows_indexed(did: &str, conn: &mut PgConnection) -> bool {
     !follows.is_empty()
 }
 
+/// Checks if a user is a known user of the feed.
+pub fn is_known_user(did: &str, conn: &mut PgConnection) -> bool {
+    use crate::schema::user_feed_preference::dsl::{did as user_did, user_feed_preference};
+    use crate::schema::visitor::dsl::{did as visitor_did, visitor};
+
+    let pref_exists = user_feed_preference
+        .filter(user_did.eq(did))
+        .limit(1)
+        .load::<crate::models::UserFeedPreference>(conn)
+        .map(|r| !r.is_empty())
+        .unwrap_or(false);
+
+    if pref_exists {
+        return true;
+    }
+
+    let visitor_exists = visitor
+        .filter(visitor_did.eq(did))
+        .limit(1)
+        .load::<crate::models::Visitor>(conn)
+        .map(|r| !r.is_empty())
+        .unwrap_or(false);
+
+    visitor_exists
+}
+
 /// Creates a new user feed preference record in the database.
 ///
 /// # Errors
@@ -193,7 +220,7 @@ pub fn user_follows_indexed(did: &str, conn: &mut PgConnection) -> bool {
 pub async fn user_config_creation(
     config: UserFeedPreference,
     connection: WriteDbConn,
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     use crate::schema::user_feed_preference::dsl as UserFeedSchema;
 
     let new_config = (
@@ -208,7 +235,7 @@ pub async fn user_config_creation(
         .0
         .get()
         .await
-        .map_err(|e| format!("Failed to get database connection: {}", e))?
+        .map_err(|e| anyhow::anyhow!("Failed to get database connection: {}", e))?
         .interact(move |conn: &mut PgConnection| {
             diesel::insert_into(UserFeedSchema::user_feed_preference)
                 .values(&new_config)
@@ -216,7 +243,7 @@ pub async fn user_config_creation(
                 .expect("Error inserting member records");
         })
         .await
-        .map_err(|e| format!("Database interaction failed: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Database interaction failed: {}", e))?;
     Ok(())
 }
 
@@ -266,12 +293,12 @@ pub async fn following_pref_fetch(
 pub async fn following_pref_update(
     _following_preference: FollowingPreference,
     connection: WriteDbConn,
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     connection
         .0
         .get()
         .await
-        .map_err(|e| format!("Failed to get database connection: {}", e))?
+        .map_err(|e| anyhow::anyhow!("Failed to get database connection: {}", e))?
         .interact(move |conn: &mut PgConnection| {
             use crate::schema::following_preference::author;
             use crate::schema::following_preference::did;
@@ -284,7 +311,7 @@ pub async fn following_pref_update(
                 .expect("Error update config records");
         })
         .await
-        .map_err(|e| format!("Database interaction failed: {}", e))
+        .map_err(|e| anyhow::anyhow!("Database interaction failed: {}", e))
 }
 
 /// Fetches user feed preferences for a given user DID asynchronously.
@@ -316,12 +343,12 @@ pub async fn user_config_fetch(_did: String, connection: WriteDbConn) -> Vec<Use
 pub async fn user_config_update(
     config: UserFeedPreference,
     connection: WriteDbConn,
-) -> Result<(), String> {
+) -> anyhow::Result<()> {
     connection
         .0
         .get()
         .await
-        .map_err(|e| format!("Failed to get database connection: {}", e))?
+        .map_err(|e| anyhow::anyhow!("Failed to get database connection: {}", e))?
         .interact(move |conn: &mut PgConnection| {
             diesel::update(user_feed_preference)
                 .set(config)
@@ -329,7 +356,7 @@ pub async fn user_config_update(
                 .expect("Error update config records");
         })
         .await
-        .map_err(|e| format!("Database interaction failed: {}", e))
+        .map_err(|e| anyhow::anyhow!("Database interaction failed: {}", e))
 }
 
 /**
@@ -361,6 +388,32 @@ pub fn insert_follows(follows: Vec<Follow>, conn: &mut PgConnection) {
         .do_nothing()
         .execute(conn)
         .expect("Error inserting follow records");
+}
+
+/// Gets the timestamp of the last full PDS follow refresh for a user.
+pub fn get_follow_last_refreshed(did_param: &str, conn: &mut PgConnection) -> Option<NaiveDateTime> {
+    use crate::schema::follow_refresh::dsl::*;
+
+    follow_refresh
+        .filter(did.eq(did_param))
+        .select(refreshed_at)
+        .first(conn)
+        .ok()
+}
+
+/// Upserts a follow refresh timestamp for a user, marking when their follows
+/// were last fully synchronized from their PDS.
+pub fn upsert_follow_refresh(did_param: &str, conn: &mut PgConnection) {
+    use crate::schema::follow_refresh::dsl::*;
+
+    let now = chrono::Utc::now().naive_utc();
+    diesel::insert_into(crate::schema::follow_refresh::dsl::follow_refresh)
+        .values((did.eq(did_param), refreshed_at.eq(now)))
+        .on_conflict(did)
+        .do_update()
+        .set(refreshed_at.eq(now))
+        .execute(conn)
+        .expect("Error upserting follow refresh timestamp");
 }
 
 /// Deletes posts from the database identified by their URIs.

@@ -1,4 +1,5 @@
 use crate::app::bsky::embed::images::AspectRatio;
+use serde::{Deserialize, Serialize};
 use crate::com::atproto::repo::Blob;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

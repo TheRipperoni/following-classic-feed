@@ -149,3 +149,100 @@ impl HandleResolver {
         Ok(self.backup_nameserver_ips.clone())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_dns_result_single_match() {
+        let resolver = HandleResolver {
+            timeout: Duration::from_millis(3000),
+            backup_nameservers: None,
+            backup_nameserver_ips: None,
+        };
+        let results = vec!["did=did:plc:test123".to_string()];
+        let result = resolver.parse_dns_result(results).unwrap();
+        assert_eq!(result, Some("did:plc:test123".to_string()));
+    }
+
+    #[test]
+    fn test_parse_dns_result_no_match() {
+        let resolver = HandleResolver {
+            timeout: Duration::from_millis(3000),
+            backup_nameservers: None,
+            backup_nameserver_ips: None,
+        };
+        let results = vec!["some=other".to_string()];
+        let result = resolver.parse_dns_result(results).unwrap();
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_parse_dns_result_multiple_matches() {
+        let resolver = HandleResolver {
+            timeout: Duration::from_millis(3000),
+            backup_nameservers: None,
+            backup_nameserver_ips: None,
+        };
+        let results = vec![
+            "did=did:plc:first".to_string(),
+            "did=did:plc:second".to_string(),
+        ];
+        // Multiple matches should return None (ambiguous)
+        let result = resolver.parse_dns_result(results).unwrap();
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_parse_dns_result_empty_list() {
+        let resolver = HandleResolver {
+            timeout: Duration::from_millis(3000),
+            backup_nameservers: None,
+            backup_nameserver_ips: None,
+        };
+        let results: Vec<String> = vec![];
+        let result = resolver.parse_dns_result(results).unwrap();
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_parse_dns_result_did_without_prefix() {
+        let resolver = HandleResolver {
+            timeout: Duration::from_millis(3000),
+            backup_nameservers: None,
+            backup_nameserver_ips: None,
+        };
+        let results = vec!["not-starting-with-prefix".to_string()];
+        let result = resolver.parse_dns_result(results).unwrap();
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_parse_dns_result_mixed_results() {
+        let resolver = HandleResolver {
+            timeout: Duration::from_millis(3000),
+            backup_nameservers: None,
+            backup_nameserver_ips: None,
+        };
+        let results = vec![
+            "some=other".to_string(),
+            "did=did:plc:the-one".to_string(),
+            "another=record".to_string(),
+        ];
+        let result = resolver.parse_dns_result(results).unwrap();
+        assert_eq!(result, Some("did:plc:the-one".to_string()));
+    }
+
+    #[test]
+    fn test_parse_dns_result_empty_string_entries() {
+        let resolver = HandleResolver {
+            timeout: Duration::from_millis(3000),
+            backup_nameservers: None,
+            backup_nameserver_ips: None,
+        };
+        let results = vec!["".to_string(), "did=did:plc:valid".to_string()];
+        let result = resolver.parse_dns_result(results).unwrap();
+        assert_eq!(result, Some("did:plc:valid".to_string()));
+    }
+}

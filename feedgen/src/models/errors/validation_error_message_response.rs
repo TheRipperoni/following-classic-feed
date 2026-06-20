@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fmt;
 
@@ -29,3 +30,42 @@ impl fmt::Display for ValidationErrorMessageResponse {
 }
 
 impl Error for ValidationErrorMessageResponse {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::ErrorCode;
+
+    #[test]
+    fn test_validation_error_message_response_default() {
+        let resp = ValidationErrorMessageResponse::new();
+        assert_eq!(resp.code, None);
+        assert_eq!(resp.message, None);
+    }
+
+    #[test]
+    fn test_validation_error_message_response_display() {
+        let resp = ValidationErrorMessageResponse {
+            code: Some(ErrorCode::ValidationError),
+            message: Some("invalid input".to_string()),
+        };
+        assert_eq!(resp.to_string(), "validation_error: invalid input");
+    }
+
+    #[test]
+    fn test_validation_error_message_response_display_empty_message() {
+        let resp = ValidationErrorMessageResponse::new();
+        assert_eq!(resp.to_string(), "validation_error: ");
+    }
+
+    #[test]
+    fn test_validation_error_message_response_serde() {
+        let resp = ValidationErrorMessageResponse {
+            code: Some(ErrorCode::InvalidUser),
+            message: Some("user not found".to_string()),
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        let deserialized: ValidationErrorMessageResponse = serde_json::from_str(&json).unwrap();
+        assert_eq!(resp, deserialized);
+    }
+}

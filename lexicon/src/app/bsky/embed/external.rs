@@ -1,4 +1,5 @@
 use crate::com::atproto::repo::Blob;
+use serde::{Deserialize, Serialize};
 
 /// A representation of some externally linked content (eg, a URL and 'card'),
 /// embedded in a Bluesky record (eg, a post).

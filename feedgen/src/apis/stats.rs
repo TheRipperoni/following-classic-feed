@@ -8,6 +8,13 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use std::time::SystemTime;
 
+fn map_diesel_error(err: diesel::result::Error) -> ValidationErrorMessageResponse {
+    ValidationErrorMessageResponse {
+        code: Some(ErrorCode::ValidationError),
+        message: Some(format!("Database query failed: {}", err)),
+    }
+}
+
 /// Inserts a new visitor record into the database.
 pub async fn add_visitor(
     user: String,
@@ -34,7 +41,7 @@ pub async fn add_visitor(
                     feed.eq(requested_feed),
                 ))
                 .execute(conn)
-                .expect("Error inserting visitor records");
+                .map_err(|e| format!("Error inserting visitor records: {}", e))?;
             Ok(())
         })
         .await
@@ -111,7 +118,7 @@ pub async fn get_visitors(
                 .limit(100)
                 .select(Visitor::as_select())
                 .load(conn)
-                .expect("Error loading visitor records");
+                .map_err(map_diesel_error)?;
             Ok(results)
         })
         .await

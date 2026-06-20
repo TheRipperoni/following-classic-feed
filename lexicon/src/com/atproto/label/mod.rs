@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 /// Metadata tag on an atproto resource (eg, repo or record).
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

@@ -7,7 +7,7 @@ Source code for the Following Classic Feed project.
 ## Project Structure
 
 - `crypto`: Cryptographic helpers (secp256k1, p256, multibase).
-- `feedgen`: Rocket-based feed generator implementation and main API.
+- `feedgen`: Axum-based feed generator implementation and main API.
 - `identity`: DID and handle resolution logic.
 - `jetstream`: Subscriber for the Jetstream firehose.
 - `lexicon`: Central place for protocol-specific data structures and lexicons.
@@ -19,7 +19,7 @@ Source code for the Following Classic Feed project.
 
 ### Prerequisites
 - **Rust**: Latest stable Rust toolchain.
-- **PostgreSQL**: Used for data storage (PostgreSQL 14 recommended).
+- **PostgreSQL**: Used for data storage (PostgreSQL 16 required).
 - **Diesel CLI**: Required for database migrations.
   ```bash
   cargo install diesel_cli --no-default-features --features postgres
@@ -56,18 +56,26 @@ Source code for the Following Classic Feed project.
 - `POSTGRES_DB`: Database name.
 
 ### Feed Generator (`feedgen.env`)
-- `DATABASE_URL`: Connection string for the PostgreSQL database.
+- `DATABASE_URL`: Connection string for the PostgreSQL database (write pool).
 - `READ_REPLICA_URL`: Connection string for the read replica (optional, defaults to `DATABASE_URL`).
+- `API_KEY`: Pre-shared API key for internal endpoint authentication.
+- `PORT`: Service port (default: `8000`).
+- `JWT_SECRET`: Secret key for HS256 JWT signing.
+- `USERNAME`/`PASSWORD`: Basic auth credentials.
 - `FEEDGEN_SERVICE_DID`: The DID of the feed generator service.
 - `FEEDGEN_HOSTNAME`: The hostname where the feed generator is hosted.
 - `FEEDGEN_DOMAIN`: Domain for Caddy to route to feedgen (e.g., `feedgen.example.com`).
 - `STATS_DOMAIN`: Domain for Caddy to route to stats-viz (e.g., `stats.example.com`).
 - `FEEDGEN_SUBSCRIPTION_ENDPOINT`: WebSocket endpoint for the subscription (e.g., `wss://jetstream1.us-west.bsky.network`).
+- `ENABLE_BACKFILL`: Set to `true` to enable the backfill worker (default: disabled).
+- `WRITE_POOL_SIZE`: Database write connection pool size (default: `40`).
+- `READ_POOL_SIZE`: Database read connection pool size (default: `40`).
 
 ### Janitor (`janitor.env`)
 - `DATABASE_URL`: Connection string for the PostgreSQL database.
-- `CRON_SCHEDULE`: Cron expression for cleaning intervals (default: `0 0 0 * * * *`).
+- `CRON_SCHEDULE`: Cron expression for cleaning intervals (default: `0 0 * * * *`).
 - `RETENTION_DAYS`: Number of days to keep posts/likes/reposts (default: `2`).
+- `PORT`: Health endpoint port (default: `8001`).
 
 ### Jetstream (`jetstream.env`)
 - `DATABASE_URL`: Connection string for the PostgreSQL database.
@@ -125,6 +133,8 @@ The following secrets are required for deployment:
 1.  Install Docker and Docker Compose on your server.
 2.  Create the deployment directory: `mkdir -p ~/deploy/`.
 3.  Ensure your `.env` files are present in `~/deploy/` on the server.
+
+For detailed development documentation (build instructions, testing, code style), see `.junie/AGENTS.md`.
 
 ## License
 

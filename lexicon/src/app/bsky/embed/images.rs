@@ -1,4 +1,5 @@
 use crate::com::atproto::repo::Blob;
+use serde::{Deserialize, Serialize};
 
 /// A set of images embedded in a Bluesky record (eg, a post).
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

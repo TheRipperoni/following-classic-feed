@@ -57,8 +57,8 @@ where
 {
     type Rejection = (StatusCode, Json<InternalErrorMessageResponse>);
 
-    #[tracing::instrument(skip(parts, _state))]
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    #[tracing::instrument(skip(parts, state))]
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         match parts.headers.get(header::AUTHORIZATION) {
             None => Err((
                 StatusCode::UNAUTHORIZED,
@@ -89,7 +89,8 @@ where
                 }
                 let jwtstr = &token[7..];
                 let service_did = env::var("FEEDGEN_SERVICE_DID").unwrap_or_default();
-                match crate::auth::verify_jwt(jwtstr, &service_did).await {
+                let mut id_resolver = IdResolver::from_ref(state);
+                match crate::auth::verify_jwt(jwtstr, &service_did, Some(&mut id_resolver)).await {
                     Ok(payload) => {
                         tracing::info!("JWT verified successfully: {}", payload);
                         Ok(AccessToken(payload))

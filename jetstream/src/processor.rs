@@ -7,6 +7,10 @@ use lexicon::app::bsky::graph::follow::Follow;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
+fn build_uri(did: &str, collection: &str, rkey: &str) -> String {
+    format!("at://{did}/{collection}/{rkey}")
+}
+
 #[tracing::instrument(skip(metrics))]
 pub async fn process(
     message: String,
@@ -58,10 +62,7 @@ pub async fn process(
                                 match commit.commit.record {
                                     Some(Lexicon::AppBskyFeedPost(r)) => {
                                         let post: Box<Post> = r;
-                                        let uri = String::from("at://")
-                                            + commit.did.as_str()
-                                            + "/app.bsky.feed.post/"
-                                            + commit.commit.rkey.as_str();
+                                        let uri = build_uri(&commit.did, "app.bsky.feed.post", &commit.commit.rkey);
                                         let create = crate::models::CreateOp {
                                             uri: uri.to_owned(),
                                             cid: cid.to_string(),
@@ -73,10 +74,7 @@ pub async fn process(
                                     }
                                     Some(Lexicon::AppBskyFeedRepost(r)) => {
                                         let repost: Repost = r;
-                                        let uri = String::from("at://")
-                                            + commit.did.as_str()
-                                            + "/app.bsky.feed.repost/"
-                                            + commit.commit.rkey.as_str();
+                                        let uri = build_uri(&commit.did, "app.bsky.feed.repost", &commit.commit.rkey);
                                         let create = crate::models::CreateOp {
                                             uri: uri.to_owned(),
                                             cid: cid.to_string(),
@@ -88,10 +86,7 @@ pub async fn process(
                                     }
                                     Some(Lexicon::AppBskyFeedLike(r)) => {
                                         let like: Like = r;
-                                        let uri = String::from("at://")
-                                            + commit.did.as_str()
-                                            + "/app.bsky.feed.like/"
-                                            + commit.commit.rkey.as_str();
+                                        let uri = build_uri(&commit.did, "app.bsky.feed.like", &commit.commit.rkey);
                                         let create = crate::models::CreateOp {
                                             uri: uri.to_owned(),
                                             cid: cid.to_string(),
@@ -103,10 +98,7 @@ pub async fn process(
                                     }
                                     Some(Lexicon::AppBskyFeedFollow(r)) => {
                                         let follow: Follow = r;
-                                        let uri = String::from("at://")
-                                            + commit.did.as_str()
-                                            + "/app.bsky.graph.follow/"
-                                            + commit.commit.rkey.as_str();
+                                        let uri = build_uri(&commit.did, "app.bsky.graph.follow", &commit.commit.rkey);
                                         let create = crate::models::CreateOp {
                                             uri: uri.to_owned(),
                                             cid: cid.to_string(),
@@ -129,10 +121,7 @@ pub async fn process(
                         "delete" => {
                             let collection = commit.commit.collection;
                             if collection == "app.bsky.feed.post" {
-                                let uri = String::from("at://")
-                                    + commit.did.as_str()
-                                    + "/app.bsky.feed.post/"
-                                    + commit.commit.rkey.as_str();
+                                let uri = build_uri(&commit.did, "app.bsky.feed.post", &commit.commit.rkey);
                                 let delete = crate::models::DeleteOp {
                                     uri: uri.to_owned(),
                                 };
@@ -140,10 +129,7 @@ pub async fn process(
                                 metrics.posts_deleted.fetch_add(1, Ordering::Relaxed);
                             }
                             if collection == "app.bsky.feed.repost" {
-                                let uri = String::from("at://")
-                                    + commit.did.as_str()
-                                    + "/app.bsky.feed.repost/"
-                                    + commit.commit.rkey.as_str();
+                                let uri = build_uri(&commit.did, "app.bsky.feed.repost", &commit.commit.rkey);
                                 let delete = crate::models::DeleteOp {
                                     uri: uri.to_owned(),
                                 };
@@ -151,10 +137,7 @@ pub async fn process(
                                 metrics.reposts_deleted.fetch_add(1, Ordering::Relaxed);
                             }
                             if collection == "app.bsky.feed.like" {
-                                let uri = String::from("at://")
-                                    + commit.did.as_str()
-                                    + "/app.bsky.feed.like/"
-                                    + commit.commit.rkey.as_str();
+                                let uri = build_uri(&commit.did, "app.bsky.feed.like", &commit.commit.rkey);
                                 let delete = crate::models::DeleteOp {
                                     uri: uri.to_owned(),
                                 };
@@ -162,10 +145,7 @@ pub async fn process(
                                 metrics.likes_deleted.fetch_add(1, Ordering::Relaxed);
                             }
                             if collection == "app.bsky.graph.follow" {
-                                let uri = String::from("at://")
-                                    + commit.did.as_str()
-                                    + "/app.bsky.graph.follow/"
-                                    + commit.commit.rkey.as_str();
+                                let uri = build_uri(&commit.did, "app.bsky.graph.follow", &commit.commit.rkey);
                                 let delete = crate::models::DeleteOp {
                                     uri: uri.to_owned(),
                                 };

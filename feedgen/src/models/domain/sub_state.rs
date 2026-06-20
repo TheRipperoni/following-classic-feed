@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use diesel::prelude::*;
 
 #[derive(Queryable, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize)]

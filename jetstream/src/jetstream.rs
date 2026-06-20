@@ -50,7 +50,7 @@ pub struct JetstreamRepoCommit {
     pub cid: Option<String>,
 }
 
-#[derive(Debug, serde_derive::Deserialize, serde_derive::Serialize, PartialEq)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq)]
 #[serde(tag = "$type")]
 pub enum Lexicon {
     #[serde(rename(deserialize = "app.bsky.feed.post", serialize = "app.bsky.feed.post"))]
@@ -117,7 +117,7 @@ pub fn read(data: &str) -> Result<JetstreamRepoMessage> {
         .as_str()
         .ok_or_else(|| anyhow::anyhow!("Missing kind"))?;
 
-    println!("Received message of kind {:?}", kind);
+    tracing::info!("Received message of kind {:?}", kind);
     let body = match kind {
         "commit" => JetstreamRepoMessage::Commit(serde_json::from_value(data_json)?),
         "account" => JetstreamRepoMessage::Account(serde_json::from_value(data_json)?),

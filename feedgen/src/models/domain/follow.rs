@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use crate::schema::follow;
 use diesel::backend::Backend;
 use diesel::deserialize::{self, Queryable};

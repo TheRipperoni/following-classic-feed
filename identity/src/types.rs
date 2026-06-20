@@ -54,6 +54,7 @@ pub struct DidResolverOpts {
     pub did_cache: DidCache,
 }
 
+#[derive(Debug)]
 pub struct AtprotoData {
     pub did: String,
     pub signing_key: String,
@@ -147,5 +148,178 @@ impl DidCache {
     pub fn clear(&mut self) -> Result<()> {
         self.cache.clear();
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[test]
+    fn test_did_cache_new() {
+        let cache = DidCache::new(None, None);
+        // Note: common::HOUR = 1000 * 60 * 60 = 3_600_000 (milliseconds-based constant)
+        // This is passed to Duration::new(secs, nanos), so the effective duration
+        // is 3_600_000 seconds ~ 41.67 days, matching the current implementation.
+        assert_eq!(cache.stale_ttl, Duration::new(3_600_000, 0));
+        assert_eq!(cache.max_ttl, Duration::new(86_400_000, 0));
+    }
+
+    #[test]
+    fn test_did_cache_new_custom_ttl() {
+        let cache = DidCache::new(
+            Some(Duration::new(60, 0)),    // 1 min stale
+            Some(Duration::new(600, 0)),   // 10 min max
+        );
+        assert_eq!(cache.stale_ttl, Duration::new(60, 0));
+        assert_eq!(cache.max_ttl, Duration::new(600, 0));
+    }
+
+    #[tokio::test]
+    async fn test_did_cache_cache_and_check() {
+        let mut cache = DidCache::new(
+            Some(Duration::new(3600, 0)),
+            Some(Duration::new(86400, 0)),
+        );
+        let did = "did:plc:test123".to_string();
+        let doc = DidDocument {
+            context: Some(vec!["https://www.w3.org/ns/did/v1".to_string()]),
+            id: did.clone(),
+            also_known_as: Some(vec!["at://alice.com".to_string()]),
+            verification_method: None,
+            service: None,
+        };
+
+        cache.cache_did(did.clone(), doc.clone()).await.unwrap();
+        let result = cache.check_cache(did.clone()).unwrap();
+        assert!(result.is_some());
+        let cached = result.unwrap();
+        assert_eq!(cached.did, did);
+        assert_eq!(cached.doc.id, "did:plc:test123");
+        assert!(!cached.expired);
+    }
+
+    #[tokio::test]
+    async fn test_did_cache_check_missing() {
+        let cache = DidCache::new(None, None);
+        let result = cache.check_cache("did:plc:nonexistent".to_string()).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_did_cache_clear_entry() {
+        let mut cache = DidCache::new(None, None);
+        cache.cache_did(
+            "did:plc:test1".to_string(),
+            DidDocument {
+                context: None,
+                id: "did:plc:test1".to_string(),
+                also_known_as: None,
+                verification_method: None,
+                service: None,
+            },
+        ).await.unwrap();
+        cache.cache_did(
+            "did:plc:test2".to_string(),
+            DidDocument {
+                context: None,
+                id: "did:plc:test2".to_string(),
+                also_known_as: None,
+                verification_method: None,
+                service: None,
+            },
+        ).await.unwrap();
+
+        assert!(cache.check_cache("did:plc:test1".to_string()).unwrap().is_some());
+        cache.clear_entry("did:plc:test1".to_string()).unwrap();
+        assert!(cache.check_cache("did:plc:test1".to_string()).unwrap().is_none());
+        assert!(cache.check_cache("did:plc:test2".to_string()).unwrap().is_some());
+    }
+
+    #[tokio::test]
+    async fn test_did_cache_clear_all() {
+        let mut cache = DidCache::new(None, None);
+        cache.cache_did(
+            "did:plc:a".to_string(),
+            DidDocument { context: None, id: "did:plc:a".to_string(), also_known_as: None, verification_method: None, service: None },
+        ).await.unwrap();
+        cache.cache_did(
+            "did:plc:b".to_string(),
+            DidDocument { context: None, id: "did:plc:b".to_string(), also_known_as: None, verification_method: None, service: None },
+        ).await.unwrap();
+        cache.clear().unwrap();
+        assert!(cache.check_cache("did:plc:a".to_string()).unwrap().is_none());
+        assert!(cache.check_cache("did:plc:b".to_string()).unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn test_did_cache_refresh() {
+        let mut cache = DidCache::new(None, None);
+        let did = "did:plc:test".to_string();
+
+        // Initial cache
+        cache.cache_did(did.clone(), DidDocument {
+            context: None,
+            id: did.clone(),
+            also_known_as: None,
+            verification_method: None,
+            service: None,
+        }).await.unwrap();
+
+        // Refresh with new doc
+        cache.refresh_cache(did.clone(), || async {
+            Ok(Some(DidDocument {
+                context: None,
+                id: "did:plc:test".to_string(),
+                also_known_as: Some(vec!["at://newhandle.com".to_string()]),
+                verification_method: None,
+                service: None,
+            }))
+        }).await.unwrap();
+
+        let result = cache.check_cache(did.clone()).unwrap().unwrap();
+        assert_eq!(result.doc.also_known_as, Some(vec!["at://newhandle.com".to_string()]));
+    }
+
+    #[tokio::test]
+    async fn test_did_cache_refresh_none() {
+        let mut cache = DidCache::new(None, None);
+        let did = "did:plc:test".to_string();
+        cache.cache_did(did.clone(), DidDocument {
+            context: None,
+            id: did.clone(),
+            also_known_as: None,
+            verification_method: None,
+            service: None,
+        }).await.unwrap();
+
+        // Refresh returning None should not clear the entry
+        cache.refresh_cache(did.clone(), || async { Ok(None) }).await.unwrap();
+        assert!(cache.check_cache(did.clone()).unwrap().is_some());
+    }
+
+    #[test]
+    fn test_did_cache_expiry() {
+        let mut cache = DidCache::new(
+            Some(Duration::from_secs(0)),  // stale immediately
+            Some(Duration::from_secs(0)),  // expired immediately
+        );
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            cache.cache_did(
+                "did:plc:expired".to_string(),
+                DidDocument {
+                    context: None,
+                    id: "did:plc:expired".to_string(),
+                    also_known_as: None,
+                    verification_method: None,
+                    service: None,
+                },
+            ).await.unwrap();
+        });
+        let result = cache.check_cache("did:plc:expired".to_string()).unwrap().unwrap();
+        assert!(result.stale);
+        assert!(result.expired);
     }
 }

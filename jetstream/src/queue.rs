@@ -63,7 +63,7 @@ pub async fn update_cursor(
     Ok(())
 }
 
-#[derive(serde_derive::Serialize, serde_derive::Deserialize, Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct SubState {
     pub service: String,
     pub cursor: i64,
