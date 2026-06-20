@@ -4,6 +4,7 @@ FROM --platform=linux/amd64 rust:1.93-bookworm AS builder
 # Copy local code to the container image.
 WORKDIR /usr/src/rsky
 COPY Cargo.toml Cargo.lock rust-toolchain ./
+COPY db-schema db-schema
 COPY lexicon lexicon
 COPY identity identity
 COPY syntax syntax

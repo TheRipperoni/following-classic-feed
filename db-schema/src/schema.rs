@@ -13,6 +13,13 @@ diesel::table! {
 }
 
 diesel::table! {
+    follow_refresh (did) {
+        did -> Varchar,
+        refreshed_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     fetched_post (did) {
         did -> Varchar,
         uri -> Varchar,
@@ -150,6 +157,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     backfill_job,
     fetched_post,
     follow,
+    follow_refresh,
     following_preference,
     janitor_config,
     like,

@@ -1,5 +1,6 @@
 use crate::models::{FetchedPost, Follow, FollowingPreference, UserFeedPreference};
 use crate::{ReadReplicaConn, WriteDbConn};
+use chrono::NaiveDateTime;
 use diesel::dsl::count;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -387,6 +388,32 @@ pub fn insert_follows(follows: Vec<Follow>, conn: &mut PgConnection) {
         .do_nothing()
         .execute(conn)
         .expect("Error inserting follow records");
+}
+
+/// Gets the timestamp of the last full PDS follow refresh for a user.
+pub fn get_follow_last_refreshed(did_param: &str, conn: &mut PgConnection) -> Option<NaiveDateTime> {
+    use crate::schema::follow_refresh::dsl::*;
+
+    follow_refresh
+        .filter(did.eq(did_param))
+        .select(refreshed_at)
+        .first(conn)
+        .ok()
+}
+
+/// Upserts a follow refresh timestamp for a user, marking when their follows
+/// were last fully synchronized from their PDS.
+pub fn upsert_follow_refresh(did_param: &str, conn: &mut PgConnection) {
+    use crate::schema::follow_refresh::dsl::*;
+
+    let now = chrono::Utc::now().naive_utc();
+    diesel::insert_into(crate::schema::follow_refresh::dsl::follow_refresh)
+        .values((did.eq(did_param), refreshed_at.eq(now)))
+        .on_conflict(did)
+        .do_update()
+        .set(refreshed_at.eq(now))
+        .execute(conn)
+        .expect("Error upserting follow refresh timestamp");
 }
 
 /// Deletes posts from the database identified by their URIs.

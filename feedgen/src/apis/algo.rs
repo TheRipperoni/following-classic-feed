@@ -7,6 +7,7 @@ use chrono::{DateTime, NaiveDateTime};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::sql_query;
+use std::collections::HashSet;
 use std::fmt::Write;
 
 pub const SHOW_REPLIES_FOR_FOLLOWING_ONLY: &str =
@@ -24,6 +25,9 @@ pub const HIDE_SEEN_POSTS: &str =
 pub const HIDE_NOT_ALT_TEXT_POSTS: &str =
     "at://did:plc:cimwguwdlh2i2mebdqczgcyl/app.bsky.feed.post/3lbsxswsgus2f";
 pub const CURSOR_TIMESTAMP_TOLERANCE_NS: u32 = 230 * 1_000_000;
+/// Number of hours after which a user's cached follows are considered stale
+/// and will be reconciled against their PDS.
+pub const FOLLOW_REFRESH_HOURS: i64 = 24;
 pub const USER_PREF_OPTIONS: [&str; 6] = [
     RESET_PREF,
     DONT_SHOW_QUOTEPOSTS,
@@ -430,13 +434,17 @@ pub async fn get_posts_by_user_feed(
 }
 
 /// Fetches follows from the remote service if they are not already cached in the database.
+/// If follows exist but haven't been refreshed within `FOLLOW_REFRESH_HOURS`,
+/// triggers a reconciliation against the user's PDS to pick up missed changes.
 #[tracing::instrument(skip(connection))]
 pub async fn refresh_follows_if_needed(
     did: String,
     connection: &ReadReplicaConn,
 ) -> Result<Vec<String>, ValidationErrorMessageResponse> {
     let mut follow_dids = get_saved_follows(did.clone(), connection).await;
+    
     if follow_dids.is_empty() {
+        // Bootstrap — no cached follows, fetch fresh from PDS
         tracing::info!("Creating followers and following for {}", did);
         if let Ok(agent) = get_agent().await {
             let follows = get_follows(&agent, did.as_ref()).await;
@@ -451,8 +459,10 @@ pub async fn refresh_follows_if_needed(
                     code: Some(ErrorCode::ValidationError),
                     message: Some("Failed to get database connection".to_string()),
                 })?;
+            let did_clone = did.clone();
             conn.interact(move |conn| {
                 insert_follows(follows, conn);
+                upsert_follow_refresh(&did_clone, conn);
                 // insert_follows(followers, conn); // Need a different insert_follows that takes (follower, subject) correctly?
             })
             .await
@@ -460,10 +470,139 @@ pub async fn refresh_follows_if_needed(
                 code: Some(ErrorCode::ValidationError),
                 message: Some("Database interaction failed".to_string()),
             })?;
+            follow_dids = get_saved_follows(did.clone(), connection).await;
+        }
+    } else {
+        // Follows exist in cache — check if they need reconciliation
+        let did_for_check = did.clone();
+        let needs_refresh = connection
+            .0
+            .get()
+            .await
+            .map_err(|_| ValidationErrorMessageResponse {
+                code: Some(ErrorCode::ValidationError),
+                message: Some("Failed to get database connection".to_string()),
+            })?
+            .interact(move |conn: &mut PgConnection| {
+                let last_refreshed = get_follow_last_refreshed(&did_for_check, conn);
+                match last_refreshed {
+                    None => {
+                        tracing::info!("Follows for {} have never been fully refreshed from PDS, triggering reconciliation", did_for_check);
+                        true
+                    }
+                    Some(ts) => {
+                        let cutoff =
+                            chrono::Utc::now().naive_utc() - chrono::Duration::hours(FOLLOW_REFRESH_HOURS);
+                        if ts < cutoff {
+                            tracing::info!(
+                                "Follows for {} are stale (last refreshed: {}), triggering reconciliation",
+                                did_for_check,
+                                ts
+                            );
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                }
+            })
+            .await
+            .map_err(|_| ValidationErrorMessageResponse {
+                code: Some(ErrorCode::ValidationError),
+                message: Some("Database interaction failed".to_string()),
+            })?;
+
+        if needs_refresh {
+            reconcile_follows(did.clone(), connection).await?;
             follow_dids = get_saved_follows(did, connection).await;
         }
     }
+
     Ok(follow_dids)
+}
+
+/// Reconciles the cached follows for a user against their PDS.
+///
+/// Compares the local `follow` table against the user's PDS follow records
+/// and repairs any inconsistencies:
+/// - Deletes follows that exist locally but no longer exist on the PDS
+/// - Inserts follows from the PDS that are missing locally
+/// - Updates the `follow_refresh` timestamp
+#[tracing::instrument(skip(connection))]
+async fn reconcile_follows(
+    did: String,
+    connection: &ReadReplicaConn,
+) -> Result<(), ValidationErrorMessageResponse> {
+    tracing::info!("Reconciling follows for {} against PDS", did);
+
+    let agent = get_agent().await.map_err(|_| ValidationErrorMessageResponse {
+        code: Some(ErrorCode::ValidationError),
+        message: Some("Failed to create agent for follow reconciliation".to_string()),
+    })?;
+    let pds_follows = get_follows(&agent, &did).await;
+
+    let conn = connection
+        .0
+        .get()
+        .await
+        .map_err(|_| ValidationErrorMessageResponse {
+            code: Some(ErrorCode::ValidationError),
+            message: Some("Failed to get database connection for follow reconciliation".to_string()),
+        })?;
+
+    conn.interact(move |conn: &mut PgConnection| {
+        use crate::schema::follow::dsl::*;
+
+        // Load current DB follows for this user
+        let db_follows: Vec<Follow> = follow
+            .filter(author.eq(&did))
+            .select(Follow::as_select())
+            .load(conn)
+            .expect("Error loading follows for reconciliation");
+
+        // Build a set of URIs that exist on the PDS
+        let pds_uri_set: HashSet<String> = pds_follows.iter().map(|f| f.uri.clone()).collect();
+
+        // Delete follows that are in the DB but no longer on the PDS
+        let uris_to_delete: Vec<String> = db_follows
+            .iter()
+            .filter(|f| !pds_uri_set.contains(&f.uri))
+            .map(|f| f.uri.clone())
+            .collect();
+
+        if !uris_to_delete.is_empty() {
+            let deleted_count = diesel::delete(follow.filter(uri.eq_any(&uris_to_delete)))
+                .execute(conn)
+                .expect("Error deleting stale follows during reconciliation");
+            tracing::info!("Deleted {} stale follows for {}", deleted_count, &did);
+        }
+
+        // Build a set of URIs already in the DB
+        let db_uri_set: HashSet<String> = db_follows.iter().map(|f| f.uri.clone()).collect();
+
+        // Insert follows from PDS that aren't yet in the DB
+        let new_follows: Vec<Follow> = pds_follows
+            .into_iter()
+            .filter(|f| !db_uri_set.contains(&f.uri))
+            .collect();
+
+        if !new_follows.is_empty() {
+            let new_count = new_follows.len();
+            insert_follows(new_follows, conn);
+            tracing::info!("Inserted {} new follows for {} during reconciliation", new_count, &did);
+        }
+
+        // Update the refresh timestamp
+        upsert_follow_refresh(&did, conn);
+        tracing::info!("Follow reconciliation complete for {}", &did);
+    })
+    .await
+    .map_err(|_| ValidationErrorMessageResponse {
+        code: Some(ErrorCode::ValidationError),
+        message: Some("Database interaction failed during follow reconciliation".to_string()),
+    })?;
+
+    Ok(())
 }
 
 /// Sanitizes a DID string for safe SQL interpolation by escaping single quotes.

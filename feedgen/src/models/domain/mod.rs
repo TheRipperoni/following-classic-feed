@@ -1,6 +1,7 @@
 pub mod backfill_job;
 pub mod fetched_post;
 pub mod follow;
+pub mod follow_refresh;
 pub mod following_preference;
 pub mod janitor_config;
 pub mod jwt_parts;

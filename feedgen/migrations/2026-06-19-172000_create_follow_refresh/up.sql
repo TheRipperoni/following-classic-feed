@@ -1,0 +1,4 @@
+CREATE TABLE follow_refresh (
+    did VARCHAR NOT NULL PRIMARY KEY,
+    refreshed_at TIMESTAMP NOT NULL DEFAULT NOW()
+);

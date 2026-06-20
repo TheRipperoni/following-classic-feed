@@ -15,6 +15,7 @@ pub use self::api::well_known::{self, WellKnown};
 pub use self::domain::backfill_job::{self, BackfillJob};
 pub use self::domain::fetched_post::{self, FetchedPost};
 pub use self::domain::follow::{self, Follow};
+pub use self::domain::follow_refresh::{self, FollowRefresh};
 pub use self::domain::following_preference::{self, FollowingPreference};
 pub use self::domain::janitor_config::{self, JanitorConfig};
 pub use self::domain::jwt_parts::{self, JwtParts};
