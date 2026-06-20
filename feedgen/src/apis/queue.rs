@@ -10,7 +10,7 @@ use chrono::offset::Utc as UtcOffset;
 use chrono::DateTime;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use lexicon::app::bsky::embed::Embeds;
+use lexicon::app::bsky::embed::{Embeds, MediaUnion};
 use std::time::SystemTime;
 
 /// Updates the number of likes for a given actor.
@@ -99,11 +99,41 @@ fn queue_post_creation(body: Vec<CreateRequest>, conn: &mut PgConnection) {
                                 }
                             }
                         }
+                        Embeds::Gallery(e) => {
+                            post_media_original = true;
+                            for item in e.items {
+                                if !item.alt.is_empty() {
+                                    post_alt_original = Some(item.alt);
+                                }
+                            }
+                        }
                         Embeds::Video(e) => {
                             post_media_original = true;
                             post_alt_original = e.alt;
                         }
-                        Embeds::RecordWithMedia(_e) => {}
+                        Embeds::RecordWithMedia(e) => {
+                            post_media_original = true;
+                            match e.media {
+                                MediaUnion::Images(imgs) => {
+                                    for image in imgs.images {
+                                        if !image.alt.is_empty() {
+                                            post_alt_original = Some(image.alt);
+                                        }
+                                    }
+                                }
+                                MediaUnion::Gallery(g) => {
+                                    for item in g.items {
+                                        if !item.alt.is_empty() {
+                                            post_alt_original = Some(item.alt);
+                                        }
+                                    }
+                                }
+                                MediaUnion::Video(v) => {
+                                    post_alt_original = v.alt;
+                                }
+                                MediaUnion::External(_) => {}
+                            }
+                        }
                         Embeds::External(e) => {
                             new_post.external_uri = Some(e.external.uri);
                             new_post.external_title = Some(e.external.title);

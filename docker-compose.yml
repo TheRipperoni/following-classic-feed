@@ -4,7 +4,7 @@ services:
     image: postgres:16-bookworm
     restart: unless-stopped
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./following-storage:/var/lib/postgresql/data
     shm_size: 2gb
     env_file:
       - ./postgres.env
@@ -56,6 +56,3 @@ services:
       - feedgen
     environment:
       - API_KEY=${API_KEY:-test-key}
-
-volumes:
-  pgdata:
