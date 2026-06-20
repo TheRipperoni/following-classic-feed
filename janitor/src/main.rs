@@ -2,12 +2,12 @@ use axum::{routing::get, Json, Router};
 use chrono::Utc;
 use cron::Schedule;
 use dotenvy::dotenv;
-use postgres::{Client, NoTls};
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::{env, time::Duration};
+use tokio_postgres::{Client, NoTls};
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -63,7 +63,7 @@ async fn main() {
         tracing::info!("Looping");
 
         // Create a single database connection per cycle and reuse it for all operations
-        let mut client = match Client::connect(database_url.as_str(), NoTls) {
+        let client = match connect_with_retry(&database_url).await {
             Ok(c) => {
                 db_healthy.store(true, Ordering::Relaxed);
                 c
@@ -76,7 +76,7 @@ async fn main() {
             }
         };
 
-        let (cron_schedule, retention_days) = match get_config(&mut client) {
+        let (cron_schedule, retention_days) = match get_config(&client).await {
             Ok(c) => c,
             Err(e) => {
                 tracing::error!("Failed to fetch janitor config: {}", e);
@@ -89,7 +89,11 @@ async fn main() {
         let schedule = match Schedule::from_str(cron_schedule.as_str()) {
             Ok(s) => s,
             Err(e) => {
-                tracing::error!("Invalid cron schedule '{}': {}, falling back to hourly", cron_schedule, e);
+                tracing::error!(
+                    "Invalid cron schedule '{}': {}, falling back to hourly",
+                    cron_schedule,
+                    e
+                );
                 Schedule::from_str("0 0 * * * *").unwrap()
             }
         };
@@ -104,40 +108,64 @@ async fn main() {
                 tracing::info!("Sleeping for {x} seconds", x = secs);
                 tokio::time::sleep(Duration::from_secs(secs)).await;
             }
-            if let Err(e) = clean_db(&mut client, retention_days) {
+            if let Err(e) = clean_db(&client, retention_days).await {
                 tracing::error!("Failed to clean database: {}", e);
             }
         }
     }
 }
 
-fn get_config(client: &mut Client) -> Result<(String, i32), Box<dyn std::error::Error>> {
+async fn connect_with_retry(database_url: &str) -> Result<Client, String> {
+    loop {
+        match tokio_postgres::connect(database_url, NoTls).await {
+            Ok((client, connection)) => {
+                // Spawn the connection handler to keep it alive in the background
+                tokio::spawn(async move {
+                    if let Err(e) = connection.await {
+                        tracing::error!("Connection error: {e}");
+                    }
+                });
+                return Ok(client);
+            }
+            Err(e) => {
+                tracing::error!("Failed to connect to database: {e}. Retrying in 5 seconds...");
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            }
+        }
+    }
+}
+
+async fn get_config(client: &Client) -> Result<(String, i32), Box<dyn std::error::Error>> {
     let row = client
         .query_one(
             "SELECT cron_schedule, retention_days FROM janitor_config ORDER BY updated_at DESC LIMIT 1",
             &[],
-        )?;
+        )
+        .await?;
 
     let cron_schedule: String = row.get(0);
     let retention_days: i32 = row.get(1);
     Ok((cron_schedule, retention_days))
 }
 
-fn clean_db(client: &mut Client, retention_days: i32) -> Result<(), Box<dyn std::error::Error>> {
+async fn clean_db(client: &Client, retention_days: i32) -> Result<(), Box<dyn std::error::Error>> {
     client
         .execute(
             "DELETE FROM post WHERE date(\"indexedAt\") < now() - make_interval(days => $1)",
             &[&retention_days],
-        )?;
+        )
+        .await?;
     client
         .execute(
             "DELETE FROM repost WHERE date(\"indexedAt\") < now() - make_interval(days => $1)",
             &[&retention_days],
-        )?;
+        )
+        .await?;
     client
         .execute(
             "DELETE FROM \"like\" WHERE date(\"indexedAt\") < now() - make_interval(days => $1)",
             &[&retention_days],
-        )?;
+        )
+        .await?;
     Ok(())
 }

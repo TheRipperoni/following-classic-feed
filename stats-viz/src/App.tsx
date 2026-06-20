@@ -22,18 +22,23 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const [statsRes, visitorsRes, janitorRes] = await Promise.all([
+      const [statsRes, visitorsRes] = await Promise.all([
         axios.get<UsageStats>(`${API_BASE_URL}/stats`),
-        axios.get<Visitor[]>(`${API_BASE_URL}/visitors`),
-        axios.get<JanitorConfig>(`${API_BASE_URL}/janitor/config`)
+        axios.get<Visitor[]>(`${API_BASE_URL}/visitors`)
       ]);
       setStats(statsRes.data);
       setVisitors(visitorsRes.data);
-      setJanitorConfig(janitorRes.data);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch data');
     } finally {
       setLoading(false);
+    }
+    // Fetch janitor config separately so a failure doesn't break the main display
+    try {
+      const janitorRes = await axios.get<JanitorConfig>(`${API_BASE_URL}/janitor/config`);
+      setJanitorConfig(janitorRes.data);
+    } catch {
+      // Janitor config is optional — don't show an error
     }
   };
 

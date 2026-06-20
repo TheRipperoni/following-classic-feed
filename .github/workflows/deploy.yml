@@ -63,7 +63,7 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           debug: true
-          source: "docker-compose.yml,feedgen/migrations,feedgen/diesel.toml"
+          source: "docker-compose.yml,feedgen/migrations,diesel.toml"
           target: "~/deploy/"
 
       - name: Deploy to server
@@ -81,7 +81,6 @@ jobs:
           script: |
             cd ~/deploy/
             echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            sudo GITHUB_REPOSITORY_OWNER=$GITHUB_REPOSITORY_OWNER docker compose pull
-            sudo GITHUB_REPOSITORY_OWNER=$GITHUB_REPOSITORY_OWNER docker compose up -d
-  
+            sudo GITHUB_REPOSITORY_OWNER=$GITHUB_REPOSITORY_OWNER docker compose up -d --pull always
+
             sudo docker image prune -f
