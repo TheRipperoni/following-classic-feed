@@ -107,29 +107,3 @@ pub async fn get_janitor_config(
         })?
 }
 
-pub async fn update_janitor_config(
-    config: JanitorConfig,
-    connection: WriteDbConn,
-) -> Result<(), String> {
-    use crate::schema::janitor_config::dsl::*;
-
-    connection
-        .0
-        .get()
-        .await
-        .map_err(|e| format!("Failed to get database connection: {}", e))?
-        .interact(move |conn: &mut PgConnection| {
-            diesel::update(janitor_config.filter(id.eq(config.id)))
-                .set((
-                    cron_schedule.eq(config.cron_schedule),
-                    retention_days.eq(config.retention_days),
-                    updated_at.eq(diesel::dsl::now),
-                ))
-                .execute(conn)
-                .map_err(|e| format!("Error updating janitor config: {}", e))
-        })
-        .await
-        .map_err(|e| format!("Database interaction failed: {}", e))??;
-
-    Ok(())
-}

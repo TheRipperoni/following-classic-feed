@@ -335,7 +335,7 @@ pub async fn user_config_fetch(_did: String, connection: WriteDbConn) -> Vec<Use
         .expect("Database interaction failed")
 }
 
-/// Updates the user feed preference in the database.
+/// Upserts the user feed preference in the database (inserts or updates by DID).
 ///
 /// # Errors
 ///
@@ -344,16 +344,21 @@ pub async fn user_config_update(
     config: UserFeedPreference,
     connection: WriteDbConn,
 ) -> anyhow::Result<()> {
+    use crate::schema::user_feed_preference::dsl::did;
+
     connection
         .0
         .get()
         .await
         .map_err(|e| anyhow::anyhow!("Failed to get database connection: {}", e))?
         .interact(move |conn: &mut PgConnection| {
-            diesel::update(user_feed_preference)
-                .set(config)
+            diesel::insert_into(user_feed_preference)
+                .values(&config)
+                .on_conflict(did)
+                .do_update()
+                .set(&config)
                 .execute(conn)
-                .expect("Error update config records");
+                .expect("Error upserting user feed preference");
         })
         .await
         .map_err(|e| anyhow::anyhow!("Database interaction failed: {}", e))

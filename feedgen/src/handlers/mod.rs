@@ -20,11 +20,13 @@ pub const MUTUALS: &str =
     "at://did:web:following.ripperoni.com/app.bsky.feed.generator/mutuals";
 
 pub mod algo;
+pub mod auth;
 pub mod config;
 pub mod queue;
 pub mod stats;
 
 pub use algo::*;
+pub use auth::*;
 pub use config::*;
 pub use queue::*;
 pub use stats::*;

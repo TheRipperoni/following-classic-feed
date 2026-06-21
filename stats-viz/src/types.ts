@@ -23,9 +23,3 @@ export interface UserFeedPreference {
   hide_no_alt_text: boolean;
 }
 
-export interface JanitorConfig {
-  id: number;
-  cron_schedule: string;
-  retention_days: number;
-  updated_at: string;
-}

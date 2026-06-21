@@ -4,6 +4,7 @@ use axum::{
     http::{header, request::Parts, StatusCode},
     Json,
 };
+use base64::engine::general_purpose;
 use identity::IdResolver;
 use std::env;
 
@@ -130,6 +131,126 @@ where
             Err(e) => Err(e),
         }
     }
+}
+
+/// A session token extracted from the `Authorization: Bearer` header.
+/// The token is a HS256 JWT signed with `JWT_SECRET` that contains the
+/// user's DID in the `sub` claim.
+#[derive(Debug)]
+pub struct SessionToken {
+    pub did: String,
+}
+
+impl<S> FromRequestParts<S> for SessionToken
+where
+    S: Send + Sync,
+{
+    type Rejection = (StatusCode, Json<InternalErrorMessageResponse>);
+
+    #[tracing::instrument(skip(parts, _state))]
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let token_str = match parts.headers.get(header::AUTHORIZATION) {
+            None => {
+                return Err((
+                    StatusCode::UNAUTHORIZED,
+                    Json(InternalErrorMessageResponse {
+                        code: Some(InternalErrorCode::Unavailable),
+                        message: Some("Missing Authorization header".to_string()),
+                    }),
+                ));
+            }
+            Some(token_header) => token_header.to_str().map_err(|_| {
+                (
+                    StatusCode::UNAUTHORIZED,
+                    Json(InternalErrorMessageResponse {
+                        code: Some(InternalErrorCode::Unavailable),
+                        message: Some("Invalid Authorization header".to_string()),
+                    }),
+                )
+            })?,
+        };
+
+        if !token_str.starts_with("Bearer ") {
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                Json(InternalErrorMessageResponse {
+                    code: Some(InternalErrorCode::Unavailable),
+                    message: Some("Invalid token format".to_string()),
+                }),
+            ));
+        }
+
+        let jwt = &token_str[7..];
+        validate_session_jwt(jwt).await.map_err(|e| {
+            (
+                StatusCode::UNAUTHORIZED,
+                Json(InternalErrorMessageResponse {
+                    code: Some(InternalErrorCode::Unavailable),
+                    message: Some(format!("Invalid session token: {e}")),
+                }),
+            )
+        })
+    }
+}
+
+/// Validates a session JWT (HS256 signed with JWT_SECRET) and returns the DID.
+async fn validate_session_jwt(jwt: &str) -> Result<SessionToken, String> {
+    use base64::engine::Engine as _;
+    use hmac::{Hmac, Mac};
+    use sha2::Sha256;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    type HmacSha256 = Hmac<Sha256>;
+
+    let parts: Vec<&str> = jwt.split('.').collect();
+    if parts.len() != 3 {
+        return Err("poorly formatted jwt".to_string());
+    }
+
+    let secret = std::env::var("JWT_SECRET").map_err(|_| "JWT_SECRET not configured".to_string())?;
+
+    // Verify signature
+    let signing_input = format!("{}.{}", parts[0], parts[1]);
+    let sig_bytes = general_purpose::URL_SAFE_NO_PAD
+        .decode(parts[2])
+        .map_err(|_| "error decoding signature".to_string())?;
+
+    let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
+        .map_err(|_| "invalid HMAC key".to_string())?;
+    mac.update(signing_input.as_bytes());
+    let expected = mac.finalize().into_bytes().to_vec();
+
+    if sig_bytes != expected {
+        return Err("jwt signature verification failed".to_string());
+    }
+
+    // Decode payload
+    let payload_bytes = general_purpose::URL_SAFE_NO_PAD
+        .decode(parts[1])
+        .map_err(|_| "error decoding payload".to_string())?;
+    let payload_str =
+        std::str::from_utf8(&payload_bytes).map_err(|_| "error parsing payload".to_string())?;
+    let payload: serde_json::Value =
+        serde_json::from_str(payload_str).map_err(|_| "error parsing payload".to_string())?;
+
+    // Check expiration
+    if let Some(exp) = payload["exp"].as_u64() {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|_| "system time error".to_string())?
+            .as_secs();
+        if now > exp {
+            return Err("session token expired".to_string());
+        }
+    }
+
+    // Extract DID from sub claim
+    let did = payload["sub"]
+        .as_str()
+        .ok_or_else(|| "missing sub claim".to_string())?
+        .to_string();
+
+    Ok(SessionToken { did })
 }
 
 #[cfg(test)]
