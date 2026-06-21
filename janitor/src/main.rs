@@ -31,16 +31,22 @@ async fn main() {
             "/health",
             get(move || async move {
                 if health_flag.load(Ordering::Relaxed) {
-                    (axum::http::StatusCode::OK, Json(serde_json::json!({
-                        "status": "ok",
-                        "service": "janitor"
-                    })))
+                    (
+                        axum::http::StatusCode::OK,
+                        Json(serde_json::json!({
+                            "status": "ok",
+                            "service": "janitor"
+                        })),
+                    )
                 } else {
-                    (axum::http::StatusCode::SERVICE_UNAVAILABLE, Json(serde_json::json!({
-                        "status": "error",
-                        "service": "janitor",
-                        "message": "Database connection unavailable"
-                    })))
+                    (
+                        axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                        Json(serde_json::json!({
+                            "status": "error",
+                            "service": "janitor",
+                            "message": "Database connection unavailable"
+                        })),
+                    )
                 }
             }),
         );
@@ -54,9 +60,7 @@ async fn main() {
         let listener = tokio::net::TcpListener::bind(&addr)
             .await
             .expect("Failed to bind TCP listener");
-        axum::serve(listener, app)
-            .await
-            .expect("Server failed");
+        axum::serve(listener, app).await.expect("Server failed");
     });
 
     loop {

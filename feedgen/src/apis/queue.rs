@@ -347,7 +347,10 @@ fn queue_follow_creation(body: Vec<CreateRequest>, conn: &mut PgConnection) {
                 false
             };
 
-            if user_follows_indexed(req.author.as_str(), conn) || is_known_user(req.author.as_str(), conn) || is_subject_known {
+            if user_follows_indexed(req.author.as_str(), conn)
+                || is_known_user(req.author.as_str(), conn)
+                || is_subject_known
+            {
                 if let Lexicon::AppBskyFeedFollow(follow_record) = req.record {
                     let system_time = SystemTime::now();
                     let dt: DateTime<UtcOffset> = system_time.into();
@@ -492,6 +495,9 @@ mod tests {
         let subject_is_known = false;
 
         let should_index = author_follows_indexed || author_is_known || subject_is_known;
-        assert!(!should_index, "Unknown users' follows should not be indexed");
+        assert!(
+            !should_index,
+            "Unknown users' follows should not be indexed"
+        );
     }
 }

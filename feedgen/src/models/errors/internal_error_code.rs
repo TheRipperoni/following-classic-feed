@@ -52,8 +52,14 @@ mod tests {
 
     #[test]
     fn test_internal_error_code_display() {
-        assert_eq!(InternalErrorCode::NoInternalError.to_string(), "no_internal_error");
-        assert_eq!(InternalErrorCode::InternalError.to_string(), "internal_error");
+        assert_eq!(
+            InternalErrorCode::NoInternalError.to_string(),
+            "no_internal_error"
+        );
+        assert_eq!(
+            InternalErrorCode::InternalError.to_string(),
+            "internal_error"
+        );
         assert_eq!(InternalErrorCode::DataLoss.to_string(), "data_loss");
     }
 

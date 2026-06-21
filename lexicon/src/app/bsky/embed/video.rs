@@ -1,6 +1,6 @@
 use crate::app::bsky::embed::images::AspectRatio;
-use serde::{Deserialize, Serialize};
 use crate::com::atproto::repo::Blob;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

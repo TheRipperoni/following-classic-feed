@@ -23,12 +23,7 @@ mod tests {
 
     #[test]
     fn test_verify_signature_invalid_did_format() {
-        let result = verify_signature(
-            &"not-a-did-key".to_string(),
-            b"data",
-            b"sig",
-            None,
-        );
+        let result = verify_signature(&"not-a-did-key".to_string(), b"data", b"sig", None);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Incorrect prefix"));
     }
@@ -48,12 +43,7 @@ mod tests {
     #[test]
     fn test_verify_signature_empty_data() {
         // A valid-looking did:key structure that will fail at key extraction
-        let result = verify_signature(
-            &"did:key:z".to_string(),
-            b"",
-            b"",
-            None,
-        );
+        let result = verify_signature(&"did:key:z".to_string(), b"", b"", None);
         assert!(result.is_err());
     }
 }

@@ -1,8 +1,17 @@
-use serde::{Deserialize, Serialize};
 use diesel::prelude::*;
+use serde::{Deserialize, Serialize};
 
 #[derive(
-    Queryable, Selectable, Insertable, Clone, Debug, PartialEq, Default, Serialize, Deserialize, AsChangeset,
+    Queryable,
+    Selectable,
+    Insertable,
+    Clone,
+    Debug,
+    PartialEq,
+    Default,
+    Serialize,
+    Deserialize,
+    AsChangeset,
 )]
 #[diesel(table_name = crate::schema::user_feed_preference)]
 #[diesel(check_for_backend(diesel::pg::Pg))]

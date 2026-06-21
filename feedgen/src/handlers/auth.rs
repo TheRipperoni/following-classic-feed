@@ -4,8 +4,8 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::Json;
-use base64::engine::Engine as _;
 use base64::engine::general_purpose;
+use base64::engine::Engine as _;
 use identity::{determine_pds, IdResolver};
 use rand::Rng;
 use serde::Deserialize;
@@ -13,7 +13,8 @@ use serde::Deserialize;
 /// OAuth client metadata endpoint — required by the AT Protocol OAuth spec.
 /// The client_id URL must point here.
 pub async fn client_metadata() -> Response {
-    let hostname = std::env::var("FEEDGEN_HOSTNAME").unwrap_or_else(|_| "localhost:8000".to_string());
+    let hostname =
+        std::env::var("FEEDGEN_HOSTNAME").unwrap_or_else(|_| "localhost:8000".to_string());
     let protocol = if hostname.contains("localhost") || hostname.contains("127.0.0.1") {
         "http"
     } else {
@@ -105,7 +106,8 @@ pub async fn login_bluesky(
         store.insert(state_value.clone(), (did, pds_url.clone()));
     }
 
-    let hostname = std::env::var("FEEDGEN_HOSTNAME").unwrap_or_else(|_| "localhost:8000".to_string());
+    let hostname =
+        std::env::var("FEEDGEN_HOSTNAME").unwrap_or_else(|_| "localhost:8000".to_string());
     let protocol = if hostname.contains("localhost") || hostname.contains("127.0.0.1") {
         "http"
     } else {
@@ -161,9 +163,7 @@ pub async fn bluesky_callback(
     let pds_url_normalized = pds_url.trim_end_matches('/');
     let iss_normalized = params.iss.trim_end_matches('/');
     if iss_normalized != pds_url_normalized {
-        tracing::warn!(
-            "ISS mismatch: expected {pds_url_normalized}, got {iss_normalized}"
-        );
+        tracing::warn!("ISS mismatch: expected {pds_url_normalized}, got {iss_normalized}");
         return (
             StatusCode::BAD_REQUEST,
             Json(InternalErrorMessageResponse {
@@ -174,7 +174,8 @@ pub async fn bluesky_callback(
             .into_response();
     }
 
-    let hostname = std::env::var("FEEDGEN_HOSTNAME").unwrap_or_else(|_| "localhost:8000".to_string());
+    let hostname =
+        std::env::var("FEEDGEN_HOSTNAME").unwrap_or_else(|_| "localhost:8000".to_string());
     let protocol = if hostname.contains("localhost") || hostname.contains("127.0.0.1") {
         "http"
     } else {
@@ -194,12 +195,7 @@ pub async fn bluesky_callback(
         ("client_id", &client_id),
     ];
 
-    let token_response = match client
-        .post(&token_url)
-        .form(&token_params)
-        .send()
-        .await
-    {
+    let token_response = match client.post(&token_url).form(&token_params).send().await {
         Ok(resp) => resp,
         Err(e) => {
             tracing::error!("Token exchange request failed: {e}");
@@ -295,7 +291,8 @@ pub async fn bluesky_callback(
     };
 
     // Redirect back to the frontend with the session token
-    let frontend_url = std::env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+    let frontend_url =
+        std::env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
     let redirect_url = format!("{frontend_url}?token={session_token}");
 
     Redirect::to(&redirect_url).into_response()
@@ -316,9 +313,7 @@ fn extract_did_from_id_token(id_token: &str) -> Option<String> {
     if parts.len() != 3 {
         return None;
     }
-    let payload_bytes = general_purpose::URL_SAFE_NO_PAD
-        .decode(parts[1])
-        .ok()?;
+    let payload_bytes = general_purpose::URL_SAFE_NO_PAD.decode(parts[1]).ok()?;
     let payload_str = std::str::from_utf8(&payload_bytes).ok()?;
     let payload: serde_json::Value = serde_json::from_str(payload_str).ok()?;
     payload["sub"].as_str().map(|s| s.to_string())
@@ -340,9 +335,7 @@ fn issue_session_token(user_did: &str) -> anyhow::Result<String> {
         "alg": "HS256"
     });
 
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)?
-        .as_secs() as u128;
+    let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as u128;
 
     let payload = serde_json::json!({
         "sub": user_did,
@@ -399,8 +392,9 @@ mod tests {
 
         // Verify we can decode the payload
         let parts: Vec<&str> = token.split('.').collect();
-        let payload_bytes =
-            base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(parts[1]).unwrap();
+        let payload_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .decode(parts[1])
+            .unwrap();
         let payload_str = std::str::from_utf8(&payload_bytes).unwrap();
         let payload: serde_json::Value = serde_json::from_str(payload_str).unwrap();
         assert_eq!(payload["sub"], did);

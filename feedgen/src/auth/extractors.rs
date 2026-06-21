@@ -207,7 +207,8 @@ async fn validate_session_jwt(jwt: &str) -> Result<SessionToken, String> {
         return Err("poorly formatted jwt".to_string());
     }
 
-    let secret = std::env::var("JWT_SECRET").map_err(|_| "JWT_SECRET not configured".to_string())?;
+    let secret =
+        std::env::var("JWT_SECRET").map_err(|_| "JWT_SECRET not configured".to_string())?;
 
     // Verify signature
     let signing_input = format!("{}.{}", parts[0], parts[1]);

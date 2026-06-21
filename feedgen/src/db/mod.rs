@@ -396,7 +396,10 @@ pub fn insert_follows(follows: Vec<Follow>, conn: &mut PgConnection) {
 }
 
 /// Gets the timestamp of the last full PDS follow refresh for a user.
-pub fn get_follow_last_refreshed(did_param: &str, conn: &mut PgConnection) -> Option<NaiveDateTime> {
+pub fn get_follow_last_refreshed(
+    did_param: &str,
+    conn: &mut PgConnection,
+) -> Option<NaiveDateTime> {
     use crate::schema::follow_refresh::dsl::*;
 
     follow_refresh

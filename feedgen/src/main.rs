@@ -3,11 +3,9 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use feedgen::handlers::auth::{
-    bluesky_callback, client_metadata, login_bluesky, me,
-};
 use dotenvy::dotenv;
 use feedgen::apis::backfill_worker;
+use feedgen::handlers::auth::{bluesky_callback, client_metadata, login_bluesky, me};
 use feedgen::handlers::*;
 use feedgen::metrics;
 use feedgen::state::AppState;
@@ -23,10 +21,8 @@ use tower_http::trace::TraceLayer;
 async fn main() {
     dotenv().ok();
 
-    let write_database_url = env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set");
-    let read_database_url = env::var("READ_REPLICA_URL")
-        .expect("READ_REPLICA_URL must be set");
+    let write_database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let read_database_url = env::var("READ_REPLICA_URL").expect("READ_REPLICA_URL must be set");
     let write_pool_size: u32 = env::var("WRITE_POOL_SIZE")
         .unwrap_or(40.to_string())
         .parse()
@@ -74,9 +70,7 @@ async fn main() {
         oauth_state: Default::default(),
     };
 
-    let enable_backfill = env::var("ENABLE_BACKFILL")
-        .unwrap_or("false".to_string())
-        == "true";
+    let enable_backfill = env::var("ENABLE_BACKFILL").unwrap_or("false".to_string()) == "true";
     if enable_backfill {
         tokio::spawn(backfill_worker(state.clone()));
     } else {
@@ -100,7 +94,10 @@ async fn main() {
         )
         .route("/queue/{lex}/create", post(queue_creation))
         .route("/queue/{lex}/delete", post(queue_deletion))
-        .route("/xrpc/app.bsky.feed.describeFeedGenerator", get(describe_feed_generator))
+        .route(
+            "/xrpc/app.bsky.feed.describeFeedGenerator",
+            get(describe_feed_generator),
+        )
         .route("/.well-known/did.json", get(well_known))
         .route("/health", get(health_check))
         .route("/cursor", get(get_cursor).put(update_cursor))
@@ -122,7 +119,5 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .expect("Failed to bind TCP listener");
-    axum::serve(listener, app)
-        .await
-        .expect("Server failed");
+    axum::serve(listener, app).await.expect("Server failed");
 }

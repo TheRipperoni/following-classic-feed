@@ -182,8 +182,14 @@ mod tests {
         assert_eq!(ErrorCode::NoError.to_string(), "no_error");
         assert_eq!(ErrorCode::ValidationError.to_string(), "validation_error");
         assert_eq!(ErrorCode::InvalidUser.to_string(), "invalid_user");
-        assert_eq!(ErrorCode::ExceededEntityLimit.to_string(), "exceeded_entity_limit");
-        assert_eq!(ErrorCode::UnsupportedSchemaVersion.to_string(), "unsupported_schema_version");
+        assert_eq!(
+            ErrorCode::ExceededEntityLimit.to_string(),
+            "exceeded_entity_limit"
+        );
+        assert_eq!(
+            ErrorCode::UnsupportedSchemaVersion.to_string(),
+            "unsupported_schema_version"
+        );
     }
 
     #[test]

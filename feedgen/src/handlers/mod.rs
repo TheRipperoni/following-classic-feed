@@ -16,8 +16,7 @@ pub const FOLLOWING_TRAD: &str =
 pub const FOLLOWING_CLASSIC: &str =
     "at://did:plc:cimwguwdlh2i2mebdqczgcyl/app.bsky.feed.generator/follow-orig";
 pub const MEDIA: &str = "at://did:plc:nffcjkyymm3pzutbxobso2pa/app.bsky.feed.generator/media";
-pub const MUTUALS: &str =
-    "at://did:web:following.ripperoni.com/app.bsky.feed.generator/mutuals";
+pub const MUTUALS: &str = "at://did:web:following.ripperoni.com/app.bsky.feed.generator/mutuals";
 
 pub mod algo;
 pub mod auth;
@@ -74,11 +73,14 @@ pub async fn health_check(State(connection): State<crate::ReadReplicaConn>) -> R
         .into_response()
     } else {
         let status = StatusCode::SERVICE_UNAVAILABLE;
-        (status, Json(serde_json::json!({
-            "status": "error",
-            "service": "feedgen",
-            "message": "Database connection failed"
-        })))
+        (
+            status,
+            Json(serde_json::json!({
+                "status": "error",
+                "service": "feedgen",
+                "message": "Database connection failed"
+            })),
+        )
             .into_response()
     }
 }

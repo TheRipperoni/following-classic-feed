@@ -19,13 +19,11 @@ mod tests {
         let wk = WellKnown {
             context: vec!["https://www.w3.org/ns/did/v1".to_string()],
             id: "did:web:example.com".to_string(),
-            service: vec![
-                KnownService {
-                    id: "#atproto_feedgen".to_string(),
-                    r#type: "AtprotoFeedGenerator".to_string(),
-                    service_endpoint: "https://example.com".to_string(),
-                },
-            ],
+            service: vec![KnownService {
+                id: "#atproto_feedgen".to_string(),
+                r#type: "AtprotoFeedGenerator".to_string(),
+                service_endpoint: "https://example.com".to_string(),
+            }],
         };
         let json = serde_json::to_string(&wk).unwrap();
         let deserialized: WellKnown = serde_json::from_str(&json).unwrap();

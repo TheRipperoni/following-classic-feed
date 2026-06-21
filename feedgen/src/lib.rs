@@ -1,4 +1,3 @@
-
 use deadpool_diesel::postgres::{Object, Pool};
 
 #[derive(Clone)]

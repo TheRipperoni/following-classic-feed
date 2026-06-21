@@ -326,18 +326,13 @@ mod tests {
 
     #[test]
     fn test_at_uri_make_only_rkey() {
-        let uri = AtUri::make("bob.com".to_string(), None, Some("123".to_string()))
-            .unwrap();
+        let uri = AtUri::make("bob.com".to_string(), None, Some("123".to_string())).unwrap();
         assert_eq!(uri.to_string(), "at://bob.com/123");
     }
 
     #[test]
     fn test_at_uri_did_hostname() {
-        let uri = AtUri::new(
-            "at://did:plc:abc/app.bsky.feed.post/123".to_string(),
-            None,
-        )
-        .unwrap();
+        let uri = AtUri::new("at://did:plc:abc/app.bsky.feed.post/123".to_string(), None).unwrap();
         assert_eq!(uri.get_hostname(), "did:plc:abc");
         assert_eq!(uri.get_collection(), "app.bsky.feed.post");
         assert_eq!(uri.get_rkey(), "123");
@@ -369,10 +364,7 @@ mod tests {
 
     #[test]
     fn test_at_uri_invalid_base() {
-        let err = AtUri::new(
-            "/path".to_string(),
-            Some("".to_string()),
-        );
+        let err = AtUri::new("/path".to_string(), Some("".to_string()));
         assert!(err.is_err());
     }
 
@@ -403,10 +395,7 @@ mod tests {
     fn test_at_uri_set_search() {
         let mut uri = AtUri::new("at://bob.com".to_string(), None).unwrap();
         uri.set_search("?foo=bar&baz=qux".to_string()).unwrap();
-        assert_eq!(
-            uri.get_search().unwrap().unwrap(),
-            "foo=bar&baz=qux"
-        );
+        assert_eq!(uri.get_search().unwrap().unwrap(), "foo=bar&baz=qux");
     }
 
     #[test]
@@ -453,7 +442,10 @@ mod tests {
         let parsed = result.unwrap();
         assert_eq!(parsed.host, "bob.com");
         assert_eq!(parsed.pathname, "/com.example.post/123");
-        assert_eq!(parsed.search_params, vec![("key".to_string(), "val".to_string())]);
+        assert_eq!(
+            parsed.search_params,
+            vec![("key".to_string(), "val".to_string())]
+        );
         assert_eq!(parsed.hash, "hash");
     }
 

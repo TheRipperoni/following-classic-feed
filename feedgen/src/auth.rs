@@ -92,13 +92,8 @@ pub async fn verify_jwt(
             };
 
             let digest = Sha256::digest(signing_input.as_bytes());
-            let valid = crypto::verify::verify_signature(
-                &signing_key,
-                &digest,
-                &sig_bytes,
-                None,
-            )
-            .map_err(|e| anyhow!("signature verification error: {}", e))?;
+            let valid = crypto::verify::verify_signature(&signing_key, &digest, &sig_bytes, None)
+                .map_err(|e| anyhow!("signature verification error: {}", e))?;
 
             if !valid {
                 bail!("jwt signature verification failed");

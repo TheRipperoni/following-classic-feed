@@ -1,8 +1,4 @@
-use axum::{
-    extract::Request,
-    middleware::Next,
-    response::Response,
-};
+use axum::{extract::Request, middleware::Next, response::Response};
 use prometheus::{
     gather, register_counter_vec, register_histogram_vec, CounterVec, HistogramVec, TextEncoder,
 };

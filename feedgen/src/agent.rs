@@ -120,7 +120,9 @@ pub async fn get_follows(agent: &BskyAgent, did: &str) -> Vec<Follow> {
                             }
                             match obj.get("createdAt") {
                                 None => {
-                                    tracing::warn!("Follow record missing createdAt field, skipping");
+                                    tracing::warn!(
+                                        "Follow record missing createdAt field, skipping"
+                                    );
                                     continue;
                                 }
                                 Some(x) => {

@@ -1,10 +1,10 @@
-use serde::{Deserialize, Serialize};
 use crate::schema::post;
 use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::deserialize::{self, QueryableByName};
 use diesel::prelude::Selectable;
 use diesel::row::NamedRow;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct Post {

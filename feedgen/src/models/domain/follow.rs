@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
 use crate::schema::follow;
 use diesel::backend::Backend;
 use diesel::deserialize::{self, Queryable};
 use diesel::prelude::Selectable;
+use serde::{Deserialize, Serialize};
 
 type DB = diesel::pg::Pg;
 

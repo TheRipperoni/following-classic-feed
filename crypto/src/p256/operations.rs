@@ -102,23 +102,13 @@ mod tests {
 
     #[test]
     fn test_verify_did_sig_invalid_did() {
-        let result = verify_did_sig(
-            &"not-a-did".to_string(),
-            b"data",
-            b"sig",
-            None,
-        );
+        let result = verify_did_sig(&"not-a-did".to_string(), b"data", b"sig", None);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_verify_did_sig_non_p256_did() {
-        let result = verify_did_sig(
-            &"did:web:example.com".to_string(),
-            b"data",
-            b"sig",
-            None,
-        );
+        let result = verify_did_sig(&"did:web:example.com".to_string(), b"data", b"sig", None);
         assert!(result.is_err());
     }
 }

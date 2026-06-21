@@ -22,7 +22,6 @@ pub async fn get_janitor_config(
     }
 }
 
-
 #[tracing::instrument(skip(connection))]
 pub async fn update_cursor(
     State(connection): State<WriteDbConn>,
@@ -33,10 +32,14 @@ pub async fn update_cursor(
     let service = match params.get("service").and_then(|v| v.as_str()) {
         Some(s) if !s.is_empty() => s.to_string(),
         _ => {
-            return (StatusCode::BAD_REQUEST, Json(InternalErrorMessageResponse {
-                code: Some(InternalErrorCode::InternalError),
-                message: Some("Missing required parameter: service".to_string()),
-            })).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(InternalErrorMessageResponse {
+                    code: Some(InternalErrorCode::InternalError),
+                    message: Some("Missing required parameter: service".to_string()),
+                }),
+            )
+                .into_response();
         }
     };
     match apis::update_cursor(service, new_cursor.cursor, connection).await {
@@ -61,10 +64,14 @@ pub async fn get_cursor(
     let service = match params.get("service").and_then(|v| v.as_str()) {
         Some(s) if !s.is_empty() => s.to_string(),
         _ => {
-            return (StatusCode::BAD_REQUEST, Json(InternalErrorMessageResponse {
-                code: Some(InternalErrorCode::InternalError),
-                message: Some("Missing required parameter: service".to_string()),
-            })).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(InternalErrorMessageResponse {
+                    code: Some(InternalErrorCode::InternalError),
+                    message: Some("Missing required parameter: service".to_string()),
+                }),
+            )
+                .into_response();
         }
     };
     match apis::get_cursor(service, connection).await {
@@ -99,10 +106,7 @@ pub async fn update_user_config(
     }
 }
 
-pub async fn user_config(
-    State(connection): State<WriteDbConn>,
-    token: SessionToken,
-) -> Response {
+pub async fn user_config(State(connection): State<WriteDbConn>, token: SessionToken) -> Response {
     // Use the authenticated user's DID from the session token
     let response = db::user_config_fetch(token.did, connection).await;
     Json(response).into_response()
