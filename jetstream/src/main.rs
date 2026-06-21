@@ -16,7 +16,9 @@ async fn health_check() -> &'static str {
     "OK"
 }
 
-async fn get_metrics(State(metrics): State<Arc<Metrics>>) -> Json<jetstream::metrics::MetricsSnapshot> {
+async fn get_metrics(
+    State(metrics): State<Arc<Metrics>>,
+) -> Json<jetstream::metrics::MetricsSnapshot> {
     Json(metrics.snapshot())
 }
 

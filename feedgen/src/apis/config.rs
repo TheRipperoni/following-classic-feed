@@ -106,4 +106,3 @@ pub async fn get_janitor_config(
             message: Some(format!("Database interaction failed: {}", e)),
         })?
 }
-

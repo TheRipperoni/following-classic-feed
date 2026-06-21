@@ -1,8 +1,8 @@
 use crate::app::bsky::graph::ListViewBasic;
-use serde::{Deserialize, Serialize};
 use crate::com::atproto::label::{Label, SelfLabels};
 use crate::com::atproto::repo::{Blob, StrongRef};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct GetPreferencesOutput {

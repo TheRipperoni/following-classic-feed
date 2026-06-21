@@ -30,7 +30,7 @@ pub fn has_prefix(bytes: &[u8], prefix: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::constants::{DID_KEY_PREFIX, SECP256K1_DID_PREFIX, P256_DID_PREFIX};
+    use crate::constants::{DID_KEY_PREFIX, P256_DID_PREFIX, SECP256K1_DID_PREFIX};
 
     #[test]
     fn test_extract_multikey_valid() {

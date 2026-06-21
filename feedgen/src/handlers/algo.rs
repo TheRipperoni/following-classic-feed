@@ -1,4 +1,3 @@
-use serde::{Deserialize, Serialize};
 use crate::auth::extractors::AccessToken;
 use crate::handlers::{FOLLOWING_CLASSIC, FOLLOWING_TRAD, MEDIA, MUTUALS};
 use crate::models::{
@@ -10,6 +9,7 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
 pub struct FeedSkeletonParams {
@@ -162,17 +162,18 @@ pub async fn following_preferences_fetch(
     let did = match params.get("did").and_then(|v| v.as_str()) {
         Some(s) if !s.is_empty() => s.to_string(),
         _ => {
-            return (StatusCode::BAD_REQUEST, Json(InternalErrorMessageResponse {
-                code: Some(InternalErrorCode::InternalError),
-                message: Some("Missing required parameter: did".to_string()),
-            })).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(InternalErrorMessageResponse {
+                    code: Some(InternalErrorCode::InternalError),
+                    message: Some("Missing required parameter: did".to_string()),
+                }),
+            )
+                .into_response();
         }
     };
     let preferences = db::following_pref_fetch(did.clone(), connection).await;
-    let response = FollowingPrefFetchResponse {
-        did,
-        preferences,
-    };
+    let response = FollowingPrefFetchResponse { did, preferences };
     Json(response).into_response()
 }
 

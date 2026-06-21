@@ -4,8 +4,8 @@ use crate::queue::{queue_create, queue_delete, update_cursor};
 use lexicon::app::bsky::feed::like::Like;
 use lexicon::app::bsky::feed::{Post, Repost};
 use lexicon::app::bsky::graph::follow::Follow;
-use std::sync::Arc;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 fn build_uri(did: &str, collection: &str, rkey: &str) -> String {
     format!("at://{did}/{collection}/{rkey}")
@@ -62,7 +62,11 @@ pub async fn process(
                                 match commit.commit.record {
                                     Some(Lexicon::AppBskyFeedPost(r)) => {
                                         let post: Box<Post> = r;
-                                        let uri = build_uri(&commit.did, "app.bsky.feed.post", &commit.commit.rkey);
+                                        let uri = build_uri(
+                                            &commit.did,
+                                            "app.bsky.feed.post",
+                                            &commit.commit.rkey,
+                                        );
                                         let create = crate::models::CreateOp {
                                             uri: uri.to_owned(),
                                             cid: cid.to_string(),
@@ -74,7 +78,11 @@ pub async fn process(
                                     }
                                     Some(Lexicon::AppBskyFeedRepost(r)) => {
                                         let repost: Repost = r;
-                                        let uri = build_uri(&commit.did, "app.bsky.feed.repost", &commit.commit.rkey);
+                                        let uri = build_uri(
+                                            &commit.did,
+                                            "app.bsky.feed.repost",
+                                            &commit.commit.rkey,
+                                        );
                                         let create = crate::models::CreateOp {
                                             uri: uri.to_owned(),
                                             cid: cid.to_string(),
@@ -86,7 +94,11 @@ pub async fn process(
                                     }
                                     Some(Lexicon::AppBskyFeedLike(r)) => {
                                         let like: Like = r;
-                                        let uri = build_uri(&commit.did, "app.bsky.feed.like", &commit.commit.rkey);
+                                        let uri = build_uri(
+                                            &commit.did,
+                                            "app.bsky.feed.like",
+                                            &commit.commit.rkey,
+                                        );
                                         let create = crate::models::CreateOp {
                                             uri: uri.to_owned(),
                                             cid: cid.to_string(),
@@ -98,7 +110,11 @@ pub async fn process(
                                     }
                                     Some(Lexicon::AppBskyFeedFollow(r)) => {
                                         let follow: Follow = r;
-                                        let uri = build_uri(&commit.did, "app.bsky.graph.follow", &commit.commit.rkey);
+                                        let uri = build_uri(
+                                            &commit.did,
+                                            "app.bsky.graph.follow",
+                                            &commit.commit.rkey,
+                                        );
                                         let create = crate::models::CreateOp {
                                             uri: uri.to_owned(),
                                             cid: cid.to_string(),
@@ -121,7 +137,11 @@ pub async fn process(
                         "delete" => {
                             let collection = commit.commit.collection;
                             if collection == "app.bsky.feed.post" {
-                                let uri = build_uri(&commit.did, "app.bsky.feed.post", &commit.commit.rkey);
+                                let uri = build_uri(
+                                    &commit.did,
+                                    "app.bsky.feed.post",
+                                    &commit.commit.rkey,
+                                );
                                 let delete = crate::models::DeleteOp {
                                     uri: uri.to_owned(),
                                 };
@@ -129,7 +149,11 @@ pub async fn process(
                                 metrics.posts_deleted.fetch_add(1, Ordering::Relaxed);
                             }
                             if collection == "app.bsky.feed.repost" {
-                                let uri = build_uri(&commit.did, "app.bsky.feed.repost", &commit.commit.rkey);
+                                let uri = build_uri(
+                                    &commit.did,
+                                    "app.bsky.feed.repost",
+                                    &commit.commit.rkey,
+                                );
                                 let delete = crate::models::DeleteOp {
                                     uri: uri.to_owned(),
                                 };
@@ -137,7 +161,11 @@ pub async fn process(
                                 metrics.reposts_deleted.fetch_add(1, Ordering::Relaxed);
                             }
                             if collection == "app.bsky.feed.like" {
-                                let uri = build_uri(&commit.did, "app.bsky.feed.like", &commit.commit.rkey);
+                                let uri = build_uri(
+                                    &commit.did,
+                                    "app.bsky.feed.like",
+                                    &commit.commit.rkey,
+                                );
                                 let delete = crate::models::DeleteOp {
                                     uri: uri.to_owned(),
                                 };
@@ -145,7 +173,11 @@ pub async fn process(
                                 metrics.likes_deleted.fetch_add(1, Ordering::Relaxed);
                             }
                             if collection == "app.bsky.graph.follow" {
-                                let uri = build_uri(&commit.did, "app.bsky.graph.follow", &commit.commit.rkey);
+                                let uri = build_uri(
+                                    &commit.did,
+                                    "app.bsky.graph.follow",
+                                    &commit.commit.rkey,
+                                );
                                 let delete = crate::models::DeleteOp {
                                     uri: uri.to_owned(),
                                 };
@@ -249,12 +281,20 @@ mod tests {
         let metrics = Arc::new(Metrics::new());
         let data = "{\"did\":\"did:plc:uhtptnlcrj4wrxfjfcanf34q\",\"time_us\":1731539977109649,\"kind\":\"commit\",\"commit\":{\"rev\":\"3lauicnwejh2f\",\"operation\":\"create\",\"collection\":\"app.bsky.feed.like\",\"rkey\":\"3lauicnw5op2f\",\"record\":{\"$type\":\"app.bsky.feed.like\",\"createdAt\":\"2024-11-13T23:19:36.449Z\",\"subject\":{\"cid\":\"bafyreigw5ufnkavdzcczl2dusa3bcnkckhi4tscp6qsrsmg76s3ckseney\",\"uri\":\"at://did:plc:6wthaiuqiys3y7eztkpsdam2/app.bsky.feed.post/3latjcehsho2n\"}},\"cid\":\"bafyreifsdaip3s5nm3hcz4fbgkxodnils75oi3rmqhipwtom34rxw4vwdi\"}}";
         let client = reqwest::Client::new();
-        process(data.to_string(), &client, "http://localhost", "wss://localhost", true, metrics.clone()).await;
-        
+        process(
+            data.to_string(),
+            &client,
+            "http://localhost",
+            "wss://localhost",
+            true,
+            metrics.clone(),
+        )
+        .await;
+
         assert_eq!(metrics.messages_processed.load(Ordering::Relaxed), 1);
         assert_eq!(metrics.likes_created.load(Ordering::Relaxed), 1);
         assert_eq!(metrics.errors.load(Ordering::Relaxed), 0);
-        
+
         Ok(())
     }
 
@@ -263,11 +303,19 @@ mod tests {
         let metrics = Arc::new(Metrics::new());
         let data = "invalid json";
         let client = reqwest::Client::new();
-        process(data.to_string(), &client, "http://localhost", "wss://localhost", true, metrics.clone()).await;
-        
+        process(
+            data.to_string(),
+            &client,
+            "http://localhost",
+            "wss://localhost",
+            true,
+            metrics.clone(),
+        )
+        .await;
+
         assert_eq!(metrics.messages_processed.load(Ordering::Relaxed), 1);
         assert_eq!(metrics.errors.load(Ordering::Relaxed), 1);
-        
+
         Ok(())
     }
 }

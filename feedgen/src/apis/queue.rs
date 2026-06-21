@@ -47,8 +47,6 @@ fn update_number_of_likes(actor: &str, like_count: i32, conn: &mut PgConnection)
 #[tracing::instrument(skip(conn))]
 fn queue_post_creation(body: Vec<CreateRequest>, conn: &mut PgConnection) {
     use crate::schema::post::dsl as PostSchema;
-    use crate::schema::user_feed_preference::dsl as UserFeedSchema;
-    use crate::schema::user_feed_preference::dsl::user_feed_preference;
 
     let mut new_posts = Vec::new();
 
@@ -347,7 +345,10 @@ fn queue_follow_creation(body: Vec<CreateRequest>, conn: &mut PgConnection) {
                 false
             };
 
-            if user_follows_indexed(req.author.as_str(), conn) || is_known_user(req.author.as_str(), conn) || is_subject_known {
+            if user_follows_indexed(req.author.as_str(), conn)
+                || is_known_user(req.author.as_str(), conn)
+                || is_subject_known
+            {
                 if let Lexicon::AppBskyFeedFollow(follow_record) = req.record {
                     let system_time = SystemTime::now();
                     let dt: DateTime<UtcOffset> = system_time.into();
@@ -492,6 +493,9 @@ mod tests {
         let subject_is_known = false;
 
         let should_index = author_follows_indexed || author_is_known || subject_is_known;
-        assert!(!should_index, "Unknown users' follows should not be indexed");
+        assert!(
+            !should_index,
+            "Unknown users' follows should not be indexed"
+        );
     }
 }

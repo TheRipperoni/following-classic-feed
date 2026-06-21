@@ -92,13 +92,8 @@ pub async fn verify_jwt(
             };
 
             let digest = Sha256::digest(signing_input.as_bytes());
-            let valid = crypto::verify::verify_signature(
-                &signing_key,
-                &digest,
-                &sig_bytes,
-                None,
-            )
-            .map_err(|e| anyhow!("signature verification error: {}", e))?;
+            let valid = crypto::verify::verify_signature(&signing_key, &digest, &sig_bytes, None)
+                .map_err(|e| anyhow!("signature verification error: {}", e))?;
 
             if !valid {
                 bail!("jwt signature verification failed");
@@ -169,7 +164,7 @@ mod tests {
         let mut hasher = Sha256::new();
         hasher.update(message_bytes);
         let digest_bytes = hasher.finalize();
-        let digest = Message::from_digest_slice(&digest_bytes).unwrap();
+        let digest = Message::from_digest(digest_bytes.as_slice().try_into().unwrap());
 
         let sig = secp.sign_ecdsa(digest, &secret_key);
         let sig_bytes = sig.serialize_compact();

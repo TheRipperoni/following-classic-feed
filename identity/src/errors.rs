@@ -22,28 +22,19 @@ mod tests {
     #[test]
     fn test_did_not_found_error_display() {
         let err = Error::DidNotFoundError("did:plc:test123".to_string());
-        assert_eq!(
-            err.to_string(),
-            "Could not resolve DID: `did:plc:test123`"
-        );
+        assert_eq!(err.to_string(), "Could not resolve DID: `did:plc:test123`");
     }
 
     #[test]
     fn test_poorly_formatted_did_error_display() {
         let err = Error::PoorlyFormattedDidError("invalid".to_string());
-        assert_eq!(
-            err.to_string(),
-            "Poorly formatted DID: `invalid`"
-        );
+        assert_eq!(err.to_string(), "Poorly formatted DID: `invalid`");
     }
 
     #[test]
     fn test_unsupported_did_method_error_display() {
         let err = Error::UnsupportedDidMethodError("did:eth:123".to_string());
-        assert_eq!(
-            err.to_string(),
-            "Unsupported DID method: `did:eth:123`"
-        );
+        assert_eq!(err.to_string(), "Unsupported DID method: `did:eth:123`");
     }
 
     #[test]

@@ -371,9 +371,7 @@ pub async fn get_posts_by_user_feed(
             let query_str = format!("{}{};", &query_str, &order_str);
             let repost_query_str = format!("{}{};", &repost_query_str, &order_str);
 
-            let mut results = sql_query(query_str)
-                .load::<Post>(conn)
-                .unwrap_or_default();
+            let mut results = sql_query(query_str).load::<Post>(conn).unwrap_or_default();
 
             if user_config.show_reposts {
                 let mut repost_results = sql_query(repost_query_str)
@@ -442,7 +440,7 @@ pub async fn refresh_follows_if_needed(
     connection: &ReadReplicaConn,
 ) -> Result<Vec<String>, ValidationErrorMessageResponse> {
     let mut follow_dids = get_saved_follows(did.clone(), connection).await;
-    
+
     if follow_dids.is_empty() {
         // Bootstrap — no cached follows, fetch fresh from PDS
         tracing::info!("Creating followers and following for {}", did);
@@ -450,7 +448,7 @@ pub async fn refresh_follows_if_needed(
             let follows = get_follows(&agent, did.as_ref()).await;
             // TODO: Implement get_followers and call it here.
             // let followers = get_followers(&agent, did.as_ref()).await;
-            
+
             let conn = connection
                 .0
                 .get()
@@ -535,10 +533,12 @@ async fn reconcile_follows(
 ) -> Result<(), ValidationErrorMessageResponse> {
     tracing::info!("Reconciling follows for {} against PDS", did);
 
-    let agent = get_agent().await.map_err(|_| ValidationErrorMessageResponse {
-        code: Some(ErrorCode::ValidationError),
-        message: Some("Failed to create agent for follow reconciliation".to_string()),
-    })?;
+    let agent = get_agent()
+        .await
+        .map_err(|_| ValidationErrorMessageResponse {
+            code: Some(ErrorCode::ValidationError),
+            message: Some("Failed to create agent for follow reconciliation".to_string()),
+        })?;
     let pds_follows = get_follows(&agent, &did).await;
 
     let conn = connection
@@ -547,7 +547,9 @@ async fn reconcile_follows(
         .await
         .map_err(|_| ValidationErrorMessageResponse {
             code: Some(ErrorCode::ValidationError),
-            message: Some("Failed to get database connection for follow reconciliation".to_string()),
+            message: Some(
+                "Failed to get database connection for follow reconciliation".to_string(),
+            ),
         })?;
 
     conn.interact(move |conn: &mut PgConnection| {
@@ -589,7 +591,11 @@ async fn reconcile_follows(
         if !new_follows.is_empty() {
             let new_count = new_follows.len();
             insert_follows(new_follows, conn);
-            tracing::info!("Inserted {} new follows for {} during reconciliation", new_count, &did);
+            tracing::info!(
+                "Inserted {} new follows for {} during reconciliation",
+                new_count,
+                &did
+            );
         }
 
         // Update the refresh timestamp
@@ -721,8 +727,7 @@ fn apply_cursor_to_single_query(
             let mut timestr = String::new();
             match write!(timestr, "{}", datetime.format("%+")) {
                 Ok(_) => {
-                    let cursor_filter_str =
-                        format!(" AND (\"indexedAt\" < '{0}')", timestr);
+                    let cursor_filter_str = format!(" AND (\"indexedAt\" < '{0}')", timestr);
                     query_str.push_str(&cursor_filter_str);
                 }
                 Err(error) => tracing::error!("Error formatting: {error:?}"),
@@ -827,12 +832,12 @@ pub async fn get_posts_by_following_media(
             let order_str = format!(" ORDER BY \"indexedAt\" DESC, cid DESC LIMIT {} ", limit);
             let query_str = format!("{}{};", &query_str, &order_str);
 
-            let results = sql_query(query_str)
-                .load::<Post>(conn)
-                .map_err(|e| ValidationErrorMessageResponse {
+            let results = sql_query(query_str).load::<Post>(conn).map_err(|e| {
+                ValidationErrorMessageResponse {
                     code: Some(ErrorCode::ValidationError),
                     message: Some(format!("Database query failed: {}", e)),
-                })?;
+                }
+            })?;
 
             let mut post_results = Vec::new();
             let mut cursor: Option<String> = None;
@@ -952,7 +957,9 @@ mod tests {
         let query = mutuals_query_str(did, limit);
         assert!(query.contains("did:plc:123"));
         assert!(query.contains("LIMIT 30"));
-        assert!(query.contains("JOIN follow f2 ON f1.subject = f2.author AND f1.author = f2.subject"));
+        assert!(
+            query.contains("JOIN follow f2 ON f1.subject = f2.author AND f1.author = f2.subject")
+        );
         // Verify the query returns post data columns
         assert!(query.contains("SELECT uri"));
         assert!(query.contains("FROM post"));
@@ -1104,12 +1111,12 @@ pub async fn get_posts_by_mutuals(
             // Re-adding LIMIT in case of cursor issue, though it's already in the string.
             // The previous queries did it this way.
 
-            let results = sql_query(query_str)
-                .load::<Post>(conn)
-                .map_err(|e| ValidationErrorMessageResponse {
+            let results = sql_query(query_str).load::<Post>(conn).map_err(|e| {
+                ValidationErrorMessageResponse {
                     code: Some(ErrorCode::ValidationError),
                     message: Some(format!("Database query failed: {}", e)),
-                })?;
+                }
+            })?;
 
             let mut post_results = Vec::new();
             let mut cursor: Option<String> = None;

@@ -202,14 +202,12 @@ pub fn is_known_user(did: &str, conn: &mut PgConnection) -> bool {
         return true;
     }
 
-    let visitor_exists = visitor
+    visitor
         .filter(visitor_did.eq(did))
         .limit(1)
         .load::<crate::models::Visitor>(conn)
         .map(|r| !r.is_empty())
-        .unwrap_or(false);
-
-    visitor_exists
+        .unwrap_or(false)
 }
 
 /// Creates a new user feed preference record in the database.
@@ -396,7 +394,10 @@ pub fn insert_follows(follows: Vec<Follow>, conn: &mut PgConnection) {
 }
 
 /// Gets the timestamp of the last full PDS follow refresh for a user.
-pub fn get_follow_last_refreshed(did_param: &str, conn: &mut PgConnection) -> Option<NaiveDateTime> {
+pub fn get_follow_last_refreshed(
+    did_param: &str,
+    conn: &mut PgConnection,
+) -> Option<NaiveDateTime> {
     use crate::schema::follow_refresh::dsl::*;
 
     follow_refresh

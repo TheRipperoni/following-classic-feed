@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use crate::schema::visitor;
 use diesel::prelude::*;
+use serde::{Deserialize, Serialize};
 
 #[derive(
     Queryable, Selectable, Insertable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,

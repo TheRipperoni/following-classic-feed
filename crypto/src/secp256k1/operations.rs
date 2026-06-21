@@ -35,7 +35,10 @@ pub fn verify_sig(
     let secp = Secp256k1::verification_only();
     let public_key = PublicKey::from_slice(public_key)?;
 
-    let data = Message::from_digest_slice(data)?;
+    let data = Message::from_digest(
+        data.try_into()
+            .map_err(|_| anyhow::anyhow!("data must be 32 bytes for secp256k1 digest"))?,
+    );
     let sig = match is_compact {
         true => ecdsa::Signature::from_compact(sig)?,
         false => ecdsa::Signature::from_der(sig)?,
@@ -82,8 +85,7 @@ mod tests {
     fn test_is_compact_format_der_format() {
         // DER-encoded signature starts with 0x30, not a valid compact sig
         let der_sig = [
-            0x30, 0x44, 0x02, 0x20, 0x5a, 0x5a, 0x5a, 0x5a,
-            0x02, 0x20, 0x5a, 0x5a, 0x5a, 0x5a,
+            0x30, 0x44, 0x02, 0x20, 0x5a, 0x5a, 0x5a, 0x5a, 0x02, 0x20, 0x5a, 0x5a, 0x5a, 0x5a,
         ];
         assert!(!is_compact_format(&der_sig));
     }
@@ -102,24 +104,14 @@ mod tests {
 
     #[test]
     fn test_verify_did_sig_invalid_did() {
-        let result = verify_did_sig(
-            &"did:key:invalid".to_string(),
-            b"data",
-            b"sig",
-            None,
-        );
+        let result = verify_did_sig(&"did:key:invalid".to_string(), b"data", b"sig", None);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_verify_did_sig_non_secp256k1_did() {
         // did:key with unsupported prefix
-        let result = verify_did_sig(
-            &"did:web:example.com".to_string(),
-            b"data",
-            b"sig",
-            None,
-        );
+        let result = verify_did_sig(&"did:web:example.com".to_string(), b"data", b"sig", None);
         assert!(result.is_err());
     }
 }
