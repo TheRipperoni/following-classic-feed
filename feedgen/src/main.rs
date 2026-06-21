@@ -3,6 +3,9 @@ use axum::{
     routing::{get, post},
     Router,
 };
+use feedgen::handlers::auth::{
+    bluesky_callback, client_metadata, login_bluesky, me,
+};
 use dotenvy::dotenv;
 use feedgen::apis::backfill_worker;
 use feedgen::handlers::*;
@@ -68,6 +71,7 @@ async fn main() {
         read_db,
         write_db,
         id_resolver,
+        oauth_state: Default::default(),
     };
 
     let enable_backfill = env::var("ENABLE_BACKFILL")
@@ -100,13 +104,14 @@ async fn main() {
         .route("/.well-known/did.json", get(well_known))
         .route("/health", get(health_check))
         .route("/cursor", get(get_cursor).put(update_cursor))
-        .route(
-            "/janitor/config",
-            get(get_janitor_config).put(update_janitor_config),
-        )
+        .route("/janitor/config", get(get_janitor_config))
         .route("/stats", get(get_usage_stats))
         .route("/visitors", get(get_visitors))
         .route("/metrics", get(metrics::metrics_handler))
+        .route("/oauth/client-metadata.json", get(client_metadata))
+        .route("/auth/bluesky/login", get(login_bluesky))
+        .route("/auth/bluesky/callback", get(bluesky_callback))
+        .route("/auth/me", get(me))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
         .layer(middleware::from_fn(metrics::metrics_middleware))
