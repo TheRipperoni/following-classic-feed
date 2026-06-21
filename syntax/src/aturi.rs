@@ -1,3 +1,5 @@
+use std::fmt;
+
 use anyhow::{bail, Result};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -181,8 +183,10 @@ impl AtUri {
     pub fn get_href(&self) -> String {
         self.to_string()
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl fmt::Display for AtUri {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut path = match self.pathname.is_empty() {
             true => "/".to_string(),
             false => self.pathname.clone(),
@@ -203,7 +207,7 @@ impl AtUri {
             true => self.hash.clone(),
             false => format!("#{}", self.hash),
         };
-        format!("at://{}{}{}{}", self.host, path, qs, hash)
+        write!(f, "at://{}{}{}{}", self.host, path, qs, hash)
     }
 }
 

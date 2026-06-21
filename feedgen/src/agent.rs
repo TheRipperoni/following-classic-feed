@@ -107,28 +107,22 @@ pub async fn get_follows(agent: &BskyAgent, did: &str) -> Vec<Follow> {
                             .try_into()
                             .unwrap_or(String::from("no"));
                         if follow_field == "app.bsky.graph.follow" {
-                            let subject: String;
-                            let created_at: String;
-                            match obj.get("subject") {
+                            let subject: String = match obj.get("subject") {
                                 None => {
                                     tracing::warn!("Follow record missing subject field, skipping");
                                     continue;
                                 }
-                                Some(x) => {
-                                    subject = <Ipld as Clone>::clone(x).try_into().unwrap();
-                                }
-                            }
-                            match obj.get("createdAt") {
+                                Some(x) => <Ipld as Clone>::clone(x).try_into().unwrap(),
+                            };
+                            let created_at: String = match obj.get("createdAt") {
                                 None => {
                                     tracing::warn!(
                                         "Follow record missing createdAt field, skipping"
                                     );
                                     continue;
                                 }
-                                Some(x) => {
-                                    created_at = <Ipld as Clone>::clone(x).try_into().unwrap();
-                                }
-                            }
+                                Some(x) => <Ipld as Clone>::clone(x).try_into().unwrap(),
+                            };
 
                             let new_follow = Follow {
                                 uri: record.uri.clone(),

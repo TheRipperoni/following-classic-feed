@@ -35,7 +35,10 @@ pub fn verify_sig(
     let secp = Secp256k1::verification_only();
     let public_key = PublicKey::from_slice(public_key)?;
 
-    let data = Message::from_digest_slice(data)?;
+    let data = Message::from_digest(
+        data.try_into()
+            .map_err(|_| anyhow::anyhow!("data must be 32 bytes for secp256k1 digest"))?,
+    );
     let sig = match is_compact {
         true => ecdsa::Signature::from_compact(sig)?,
         false => ecdsa::Signature::from_der(sig)?,

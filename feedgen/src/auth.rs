@@ -164,7 +164,7 @@ mod tests {
         let mut hasher = Sha256::new();
         hasher.update(message_bytes);
         let digest_bytes = hasher.finalize();
-        let digest = Message::from_digest_slice(&digest_bytes).unwrap();
+        let digest = Message::from_digest(digest_bytes.as_slice().try_into().unwrap());
 
         let sig = secp.sign_ecdsa(digest, &secret_key);
         let sig_bytes = sig.serialize_compact();

@@ -47,8 +47,6 @@ fn update_number_of_likes(actor: &str, like_count: i32, conn: &mut PgConnection)
 #[tracing::instrument(skip(conn))]
 fn queue_post_creation(body: Vec<CreateRequest>, conn: &mut PgConnection) {
     use crate::schema::post::dsl as PostSchema;
-    use crate::schema::user_feed_preference::dsl as UserFeedSchema;
-    use crate::schema::user_feed_preference::dsl::user_feed_preference;
 
     let mut new_posts = Vec::new();
 
